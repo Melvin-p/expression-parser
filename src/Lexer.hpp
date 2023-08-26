@@ -1,6 +1,7 @@
 #ifndef LEXER_HPP
 #define LEXER_HPP
 
+#include <cstddef>
 #include <sstream>
 
 enum class Token {
@@ -32,6 +33,8 @@ private:
   std::istringstream m_iss;
   std::string m_buffer;
   Token m_cur_token;
+  std::size_t m_postion{};
+  std::size_t m_line{};
 
 public:
   explicit Lexer(std::istringstream &&ss);
@@ -44,6 +47,7 @@ public:
   std::string getCurrentTokenText() const;
   /*move to the next token*/
   void advance();
+  std::string getLocation() const;
 
 private:
   /*get the next token in the stream*/

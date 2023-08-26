@@ -12,7 +12,6 @@ public:
   double operator()(std::string &s);
 
 private:
-  // Lexer *m_lexer{nullptr};
   std::unique_ptr<Lexer> m_lexer;
   std::map<const std::string, double> m_symbol_table;
 

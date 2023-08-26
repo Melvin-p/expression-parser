@@ -1,6 +1,7 @@
 #include "Lexer.hpp"
 #include "Errors.hpp"
 #include <cctype>
+#include <string>
 
 Lexer::Lexer(std::istringstream &&ss)
     : m_iss(std::move(ss)), m_buffer(""), m_cur_token(getToken()) {}
@@ -14,8 +15,20 @@ void Lexer::advance() { m_cur_token = getToken(); };
 Token Lexer::getToken() {
   m_buffer.clear();
   int c = m_iss.get();
+  if (c == '\n') {
+    ++m_line;
+    m_postion = 0;
+  } else {
+    ++m_postion;
+  }
   while (std::isspace(c)) {
     c = m_iss.get();
+    if (c == '\n') {
+      ++m_line;
+      m_postion = 0;
+    } else {
+      ++m_postion;
+    }
   }
   if (!m_iss) {
     return Token::EOF_sym;
@@ -23,11 +36,14 @@ Token Lexer::getToken() {
   if (std::isalpha(c)) {
     m_buffer.push_back(static_cast<char>(c));
     c = m_iss.get();
+    ++m_postion;
     while (std::isalnum(c)) {
       m_buffer.push_back(static_cast<char>(c));
       c = m_iss.get();
+      ++m_postion;
     }
     m_iss.putback(static_cast<char>(c));
+    --m_postion;
 
     if (m_buffer == "sin") {
       return Token::Sin;
@@ -53,7 +69,7 @@ Token Lexer::getToken() {
     if (m_buffer == "sqrt") {
       return Token::Sqrt;
     }
-    if (m_buffer == "int") {
+    if (m_buffer == "Int") {
       return Token::Int;
     }
     // must be an identifier
@@ -63,20 +79,25 @@ Token Lexer::getToken() {
   if (std::isdigit(c)) {
     m_buffer.push_back(static_cast<char>(c));
     c = m_iss.get();
+    ++m_postion;
     while (std::isdigit(c)) {
       m_buffer.push_back(static_cast<char>(c));
       c = m_iss.get();
+      ++m_postion;
     }
     // decimal point found
     if (c == '.') {
       m_buffer.push_back(static_cast<char>(c));
       c = m_iss.get();
+      ++m_postion;
       while (std::isdigit(c)) {
         m_buffer.push_back(static_cast<char>(c));
         c = m_iss.get();
+        ++m_postion;
       }
     }
     m_iss.putback(static_cast<char>(c));
+    --m_postion;
     return Token::Number;
   }
   m_buffer.push_back(static_cast<char>(c));
@@ -93,5 +114,13 @@ Token Lexer::getToken() {
     return Token(c);
   }
 
-  throw LexicalError{m_buffer};
+  throw LexicalError{m_buffer, getLocation()};
+}
+
+std::string Lexer::getLocation() const {
+  std::string out{"Line: "};
+  out.append(std::to_string(m_line));
+  out.append(" Postion: ");
+  out.append(std::to_string(m_postion));
+  return out;
 }
