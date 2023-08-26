@@ -1,0 +1,231 @@
+#include "Parser.hpp"
+#include "Errors.hpp"
+#include "Lexer.hpp"
+#include <cmath>
+#include <sstream>
+#include <stdexcept>
+
+namespace {
+inline double to_number(std::string &s) {
+  std::istringstream iss{s};
+  iss.exceptions(std::ios::failbit);
+  double x{};
+  iss >> x;
+  return x;
+}
+inline std::string to_string(double x) {
+  std::ostringstream ost;
+  ost << x;
+  return ost.str();
+}
+} // namespace
+
+Parser::Parser() {
+  m_symbol_table["pi"] = 4.0 * std::atan(1.0);
+  m_symbol_table["e"] = std::exp(1.0);
+}
+
+double Parser::operator()(std::string &s) {
+  m_lexer = std::make_unique<Lexer>(std::istringstream{s});
+  double result = assignExpr();
+  return result;
+}
+
+double Parser::assignExpr() {
+  Token t = m_lexer->getCurrentToken();
+  std::string text = m_lexer->getCurrentTokenText();
+
+  double result = addExpr();
+
+  if (m_lexer->getCurrentToken() == Token::Assign) {
+    if (t != Token::Id) {
+      throw SyntaxError{"Target of assignment must be an identifier"};
+    }
+    if (text == "pi" || text == "e") {
+      throw SyntaxError{"Attempted to modify built in constants"};
+    }
+    m_lexer->advance();
+    return m_symbol_table[text] = addExpr();
+  }
+  return result;
+}
+
+double Parser::addExpr() {
+  double result = mulExpr();
+  for (;;) {
+    switch (m_lexer->getCurrentToken()) {
+    case Token::Plus: {
+      m_lexer->advance();
+      result += mulExpr();
+      break;
+    }
+    case Token::Minus: {
+      m_lexer->advance();
+      result -= mulExpr();
+      break;
+    }
+    default: {
+      return result;
+    }
+    }
+  }
+}
+
+double Parser::mulExpr() {
+  double result = powExpr();
+  double x;
+  for (;;) {
+    switch (m_lexer->getCurrentToken()) {
+    case Token::Mul: {
+      m_lexer->advance();
+      result *= powExpr();
+      break;
+    }
+    case Token::Div: {
+      m_lexer->advance();
+      x = powExpr();
+      if (x == 0) {
+        throw std::runtime_error{"Attempted to divide by zero"};
+      }
+      result /= x;
+      break;
+    }
+    case Token::Mod: {
+      m_lexer->advance();
+      x = powExpr();
+      if (x == 0) {
+        throw std::runtime_error{"Attempted to divide by zero"};
+      }
+      result = std::fmod(result, x);
+      break;
+    }
+    default: {
+      return result;
+    }
+    }
+  }
+}
+
+double Parser::powExpr() {
+  double result = unaryExpr();
+  if (m_lexer->getCurrentToken() == Token::Pow) {
+    m_lexer->advance();
+    double x = unaryExpr();
+    checkDomain(result, x);
+    result = std::pow(result, x);
+  }
+  return result;
+}
+
+double Parser::unaryExpr() {
+  switch (m_lexer->getCurrentToken()) {
+  case Token::Plus: {
+    m_lexer->advance();
+    return +primary();
+    break;
+  }
+  case Token::Minus: {
+    m_lexer->advance();
+    return -primary();
+    break;
+  }
+  default:
+    return primary();
+  }
+}
+
+double Parser::primary() {
+  std::string text = m_lexer->getCurrentTokenText();
+  double arg;
+
+  switch (m_lexer->getCurrentToken()) {
+  case Token::Id:
+    m_lexer->advance();
+    return m_symbol_table[text];
+    break;
+  case Token::Number:
+    m_lexer->advance();
+    return to_number(text);
+    break;
+  case Token::Lp:
+    m_lexer->advance();
+    arg = addExpr();
+    if (m_lexer->getCurrentToken() != Token::Rp) {
+      throw SyntaxError{"missing ) after subexpression"};
+    }
+    m_lexer->advance();
+    return arg;
+    break;
+  case Token::Sin:
+    return std::sin(getArgument());
+    break;
+  case Token::Cos:
+    return std::cos(getArgument());
+    break;
+  case Token::Tan:
+    arg = getArgument();
+    if (cos(arg) == 0) {
+      throw std::runtime_error("Invalid argument to tan");
+    }
+    return std::tan(arg);
+    break;
+  case Token::Asin:
+    return std::asin(getArgument());
+    break;
+  case Token::Acos:
+    return std::acos(getArgument());
+    break;
+  case Token::Atan:
+    return std::atan(getArgument());
+    break;
+  case Token::Log:
+    arg = getArgument();
+    if (arg < 1) {
+      throw std::runtime_error("Invalid Argument to log");
+    }
+    return std::log(arg);
+    break;
+  case Token::Sqrt:
+    arg = getArgument();
+    if (arg < 0) {
+      throw std::runtime_error("Invalid argument to sqrt");
+    }
+    return std::sqrt(arg);
+    break;
+  case Token::Int:
+    arg = getArgument();
+    if (arg < 0) {
+      return std::ceil(arg);
+    } else {
+      return std::floor(arg);
+    }
+    break;
+  default:
+    throw SyntaxError{"invalid expression"};
+  }
+}
+
+double Parser::getArgument() {
+  m_lexer->advance();
+  if (m_lexer->getCurrentToken() != Token::Lp) {
+    throw SyntaxError{"missing ( after function name"};
+  }
+  m_lexer->advance();
+  double arg = addExpr();
+  if (m_lexer->getCurrentToken() != Token::Rp) {
+    throw SyntaxError{"missing ) after function argument"};
+  }
+  m_lexer->advance();
+  return arg;
+}
+
+void Parser::checkDomain(double x, double y) {
+  if (x >= 0) {
+    return;
+  }
+  double e = std::abs(y);
+  if (e <= 0 || e >= 1) {
+    return;
+  }
+  throw std::runtime_error{"attempted to take root of a negative number"};
+}

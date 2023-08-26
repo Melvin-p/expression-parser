@@ -1,0 +1,40 @@
+{
+    "workbench.iconTheme": "material-icon-theme",
+    "cmake.configureOnOpen": false,
+    "cmake.configureArgs": [
+        "--graphviz=${workspaceFolder}/build/${buildType}/target_graph.dot"
+    ],
+    "cmake.buildDirectory": "${workspaceFolder}/build/${buildType}",
+	"cmake.copyCompileCommands": "${workspaceFolder}/compile_commands.json",
+    "cmake.configureSettings": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": true,
+        "CMAKE_CXX_EXTENSIONS": false,
+        "C_EXTENSIONS": false
+    },
+    "cmake.preferredGenerators": [
+        "Ninja",
+        "Unix Makefiles"
+    ],
+    "debug.allowBreakpointsEverywhere": true,
+    "debug.inlineValues": "on",
+    "debug.showBreakpointsInOverviewRuler": true,
+    "[cpp]": {
+        "editor.defaultFormatter": "xaver.clang-format",
+        "editor.semanticHighlighting.enabled": true
+    },
+    "editor.formatOnSave": true,
+    "C_Cpp.autocomplete": "disabled",
+    "C_Cpp.errorSquiggles": "disabled",
+    "C_Cpp.experimentalFeatures": "disabled",
+    "C_Cpp.formatting": "disabled",
+    "C_Cpp.intelliSenseEngine": "disabled",
+    "editor.semanticHighlighting.enabled": true,
+    "clangd.arguments": [
+        "--clang-tidy",
+        "--suggest-missing-includes",
+        "--all-scopes-completion",
+        "--completion-style=detailed",
+        "--header-insertion=iwyu",
+        "--background-index",
+    ]
+}
