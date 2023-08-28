@@ -3,7 +3,6 @@
 #include "Lexer.hpp"
 #include <cmath>
 #include <sstream>
-#include <stdexcept>
 
 namespace {
 inline double to_number(std::string &s) {
@@ -240,4 +239,100 @@ void Parser::checkDomain(double x, double y) {
   }
   std::string loc = m_lexer->getLocation();
   throw RuntimeError{"attempted to take root of a negative number", loc};
+}
+
+bool Parser::binaryExpr() {
+  bool result = binaryUnaryExpr();
+  for (;;) {
+    switch (m_lexer->getCurrentToken()) {
+    case Token::And: {
+      m_lexer->advance();
+      auto temp = binaryUnaryExpr();
+      result = result && temp;
+      break;
+    }
+    case Token::Or: {
+      m_lexer->advance();
+      auto temp = binaryUnaryExpr();
+      result = result || temp;
+      break;
+    }
+    default: {
+      return result;
+    }
+    }
+  }
+}
+
+bool Parser::binaryUnaryExpr() {
+  switch (m_lexer->getCurrentToken()) {
+  case Token::Not: {
+    m_lexer->advance();
+    return !binaryPrimary();
+  }
+  default: {
+    return binaryPrimary();
+  }
+  }
+}
+
+bool Parser::binaryPrimary() {
+  bool arg{};
+  std::string loc;
+  switch (m_lexer->getCurrentToken()) {
+  case Token::True: {
+    m_lexer->advance();
+    return true;
+  }
+  case Token::False: {
+    m_lexer->advance();
+    return false;
+  }
+  case Token::Lp: {
+    m_lexer->advance();
+    arg = binaryExpr();
+    loc = m_lexer->getLocation();
+    if (m_lexer->getCurrentToken() != Token::Rp) {
+      throw SyntaxError{"missing ) after subexpression", loc};
+    }
+    m_lexer->advance();
+    return arg;
+  }
+  case Token::Number: {
+    arg = binaryCompExpr();
+    return arg;
+  }
+  default:
+    loc = m_lexer->getLocation();
+    throw SyntaxError{"invalid expression", loc};
+  }
+}
+
+bool Parser::binaryCompExpr() {
+  std::string loc;
+
+  double result = addExpr();
+
+  switch (m_lexer->getCurrentToken()) {
+  case Token::Equal_to: {
+    m_lexer->advance();
+    return result == addExpr();
+  }
+  case Token::Not_equal_to: {
+    m_lexer->advance();
+    return result != addExpr();
+  }
+  case Token::Greater_than: {
+    m_lexer->advance();
+    return result > addExpr();
+  }
+  case Token::Less_than: {
+    m_lexer->advance();
+    return result < addExpr();
+  }
+  default: {
+    loc = m_lexer->getLocation();
+    throw SyntaxError{"invalid comparator", loc};
+  }
+  }
 }

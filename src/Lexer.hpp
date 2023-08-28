@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <sstream>
+#include <string>
 
 enum class Token {
   Id,
@@ -16,6 +17,15 @@ enum class Token {
   Log,
   Sqrt,
   Int,
+  Equal_to,
+  Not_equal_to,
+  Less_than,
+  Greater_than,
+  True,
+  False,
+  And,
+  Or,
+  Not,
   Assign = '=',
   Plus = '+',
   Minus = '-',

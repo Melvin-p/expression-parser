@@ -3,7 +3,6 @@
 
 #include <exception>
 #include <string>
-#include <string_view>
 
 class LexicalError : public std::exception {
 private:

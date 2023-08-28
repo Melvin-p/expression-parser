@@ -2,7 +2,6 @@
 #include <string>
 
 LexicalError::LexicalError(std::string message, std::string location) {
-
   m_message.append(message);
   m_message.append(" ");
   m_message.append(location);

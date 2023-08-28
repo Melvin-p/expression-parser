@@ -37,7 +37,7 @@ Token Lexer::getToken() {
     m_buffer.push_back(static_cast<char>(c));
     c = m_iss.get();
     ++m_postion;
-    while (std::isalnum(c)) {
+    while (std::isalnum(c) || c == '_') {
       m_buffer.push_back(static_cast<char>(c));
       c = m_iss.get();
       ++m_postion;
@@ -71,6 +71,33 @@ Token Lexer::getToken() {
     }
     if (m_buffer == "Int") {
       return Token::Int;
+    }
+    if (m_buffer == "equal_to") {
+      return Token::Equal_to;
+    }
+    if (m_buffer == "not_equal_to") {
+      return Token::Not_equal_to;
+    }
+    if (m_buffer == "less_than") {
+      return Token::Less_than;
+    }
+    if (m_buffer == "greater_than") {
+      return Token::Greater_than;
+    }
+    if (m_buffer == "true") {
+      return Token::True;
+    }
+    if (m_buffer == "false") {
+      return Token::False;
+    }
+    if (m_buffer == "and") {
+      return Token::And;
+    }
+    if (m_buffer == "or") {
+      return Token::Or;
+    }
+    if (m_buffer == "not") {
+      return Token::Not;
     }
     // must be an identifier
     return Token::Id;

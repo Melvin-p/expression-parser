@@ -22,6 +22,12 @@ private:
   double unaryExpr();
   double primary();
   double getArgument();
+
+  bool binaryExpr();
+  bool binaryUnaryExpr();
+  bool binaryCompExpr();
+  bool binaryPrimary();
+
   void checkDomain(double x, double y);
 };
 
