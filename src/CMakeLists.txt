@@ -13,7 +13,7 @@ target_link_options("common_compiler_options" INTERFACE
     $<$<CXX_COMPILER_ID:Clang>:$<$<CONFIG:DEBUG>:-fsanitize=address -fsanitize=undefined>>
 )
 
-add_executable("esdfds" main.cpp Lexer.cpp Errors.cpp Parser.cpp)
-target_link_libraries("esdfds" PRIVATE common_compiler_options)
+add_executable("expression-parser" main.cpp Lexer.cpp Errors.cpp Parser.cpp)
+target_link_libraries("expression-parser" PRIVATE common_compiler_options)
 
 

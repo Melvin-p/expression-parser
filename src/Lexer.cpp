@@ -1,5 +1,6 @@
 #include "Lexer.hpp"
 #include "Errors.hpp"
+#include "tokens.hpp"
 #include <cctype>
 #include <string>
 
@@ -98,6 +99,12 @@ Token Lexer::getToken() {
     }
     if (m_buffer == "not") {
       return Token::Not;
+    }
+    if (m_buffer == "var") {
+      return Token::Var;
+    }
+    if (m_buffer == "Print") {
+      return Token::Print;
     }
     // must be an identifier
     return Token::Id;

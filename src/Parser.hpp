@@ -9,21 +9,21 @@
 class Parser {
 public:
   Parser();
-  double operator()(std::string &s);
+  void operator()(std::string &s);
 
 private:
   std::unique_ptr<Lexer> m_lexer;
   std::map<const std::string, double> m_symbol_table;
 
-  [[nodiscard]] double assignExpr();
-  double addExpr();
+  double assignExpr();
+  [[nodiscard]] double addExpr();
   double mulExpr();
   double powExpr();
   double unaryExpr();
   double primary();
   double getArgument();
 
-  bool binaryExpr();
+  [[nodiscard]] bool binaryExpr();
   bool binaryUnaryExpr();
   bool binaryCompExpr();
   bool binaryPrimary();

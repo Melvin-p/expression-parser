@@ -18,7 +18,7 @@ int main() {
       break;
     } else {
       try {
-        std::cout << parser(buffer) << "\n";
+        parser(buffer);
       } catch (const std::exception &e) {
         std::cerr << e.what() << "\n";
       }

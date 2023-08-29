@@ -1,42 +1,10 @@
 #ifndef LEXER_HPP
 #define LEXER_HPP
 
+#include "tokens.hpp"
 #include <cstddef>
 #include <sstream>
 #include <string>
-
-enum class Token {
-  Id,
-  Number,
-  Sin,
-  Cos,
-  Tan,
-  Asin,
-  Acos,
-  Atan,
-  Log,
-  Sqrt,
-  Int,
-  Equal_to,
-  Not_equal_to,
-  Less_than,
-  Greater_than,
-  True,
-  False,
-  And,
-  Or,
-  Not,
-  Assign = '=',
-  Plus = '+',
-  Minus = '-',
-  Mul = '*',
-  Div = '/',
-  Mod = '%',
-  Pow = '^',
-  Lp = '(',
-  Rp = ')',
-  EOF_sym = -1
-};
 
 class Lexer {
 private:

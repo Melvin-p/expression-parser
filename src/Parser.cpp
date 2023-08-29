@@ -1,7 +1,9 @@
 #include "Parser.hpp"
 #include "Errors.hpp"
 #include "Lexer.hpp"
+#include "tokens.hpp"
 #include <cmath>
+#include <iostream>
 #include <sstream>
 
 namespace {
@@ -19,13 +21,28 @@ Parser::Parser() {
   m_symbol_table["e"] = std::exp(1.0);
 }
 
-double Parser::operator()(std::string &s) {
+void Parser::operator()(std::string &s) {
   m_lexer = std::make_unique<Lexer>(std::istringstream{s});
-  double result{};
   do {
-    result = assignExpr();
+    switch (m_lexer->getCurrentToken()) {
+    case Token::Var: {
+      m_lexer->advance();
+      if (m_lexer->getCurrentToken() != Token::Id) {
+        auto loc = m_lexer->getLocation();
+        throw SyntaxError{"Missing identifier", loc};
+      }
+      assignExpr();
+      break;
+    }
+    case Token::Print: {
+      std::cout << getArgument() << "\n";
+      break;
+    }
+    default: {
+      std::cout << assignExpr() << "\n";
+    }
+    }
   } while (m_lexer->getCurrentToken() != Token::EOF_sym);
-  return result;
 }
 
 double Parser::assignExpr() {
