@@ -21,9 +21,11 @@ Parser::Parser() {
   m_symbol_table["e"] = std::exp(1.0);
 }
 
-void Parser::operator()(std::string &s) {
+void Parser::evalArithmetic(std::string &s) {
   m_lexer = std::make_unique<Lexer>(std::istringstream{s});
   do {
+    double out{};
+    bool output{false};
     switch (m_lexer->getCurrentToken()) {
     case Token::Var: {
       m_lexer->advance();
@@ -35,21 +37,36 @@ void Parser::operator()(std::string &s) {
       break;
     }
     case Token::Print: {
-      std::cout << getArgument() << "\n";
+      out = getArgument();
+      output = true;
       break;
     }
     default: {
-      std::cout << assignExpr() << "\n";
+      out = addExpr();
+      output = true;
+      break;
     }
     }
+    if (m_lexer->getCurrentToken() != Token::Semicolon) {
+      auto loc = m_lexer->getLocation();
+      throw SyntaxError{"Missing semicolon", loc};
+    }
+    if (output) {
+      std::cout << out << "\n";
+    }
+    m_lexer->advance();
   } while (m_lexer->getCurrentToken() != Token::EOF_sym);
 }
 
-double Parser::assignExpr() {
+bool Parser::evalBoolean(std::string &s) {
+  m_lexer = std::make_unique<Lexer>(std::istringstream{s});
+  return booleanExpr();
+}
+
+void Parser::assignExpr() {
   Token t = m_lexer->getCurrentToken();
   std::string text = m_lexer->getCurrentTokenText();
-
-  double result = addExpr();
+  m_lexer->advance();
 
   if (m_lexer->getCurrentToken() == Token::Assign) {
     auto loc = m_lexer->getLocation();
@@ -60,9 +77,11 @@ double Parser::assignExpr() {
       throw SyntaxError{"Attempted to modify built in constants", loc};
     }
     m_lexer->advance();
-    return m_symbol_table[text] = addExpr();
+    m_symbol_table[text] = addExpr();
+  } else {
+    auto loc = m_lexer->getLocation();
+    throw SyntaxError{"Missing = after variable name", loc};
   }
-  return result;
 }
 
 double Parser::addExpr() {
@@ -258,19 +277,19 @@ void Parser::checkDomain(double x, double y) {
   throw RuntimeError{"attempted to take root of a negative number", loc};
 }
 
-bool Parser::binaryExpr() {
-  bool result = binaryUnaryExpr();
+bool Parser::booleanExpr() {
+  bool result = booleanUnaryExpr();
   for (;;) {
     switch (m_lexer->getCurrentToken()) {
     case Token::And: {
       m_lexer->advance();
-      auto temp = binaryUnaryExpr();
+      auto temp = booleanUnaryExpr();
       result = result && temp;
       break;
     }
     case Token::Or: {
       m_lexer->advance();
-      auto temp = binaryUnaryExpr();
+      auto temp = booleanUnaryExpr();
       result = result || temp;
       break;
     }
@@ -281,22 +300,28 @@ bool Parser::binaryExpr() {
   }
 }
 
-bool Parser::binaryUnaryExpr() {
+bool Parser::booleanUnaryExpr() {
   switch (m_lexer->getCurrentToken()) {
   case Token::Not: {
     m_lexer->advance();
-    return !binaryPrimary();
+    return !booleanPrimary();
   }
   default: {
-    return binaryPrimary();
+    return booleanPrimary();
   }
   }
 }
 
-bool Parser::binaryPrimary() {
+bool Parser::booleanPrimary() {
+  std::string text = m_lexer->getCurrentTokenText();
   bool arg{};
   std::string loc;
   switch (m_lexer->getCurrentToken()) {
+  case Token::Id: {
+    m_lexer->advance();
+    return static_cast<bool>(m_symbol_table[text]);
+    break;
+  }
   case Token::True: {
     m_lexer->advance();
     return true;
@@ -307,7 +332,7 @@ bool Parser::binaryPrimary() {
   }
   case Token::Lp: {
     m_lexer->advance();
-    arg = binaryExpr();
+    arg = booleanExpr();
     loc = m_lexer->getLocation();
     if (m_lexer->getCurrentToken() != Token::Rp) {
       throw SyntaxError{"missing ) after subexpression", loc};
@@ -316,7 +341,7 @@ bool Parser::binaryPrimary() {
     return arg;
   }
   case Token::Number: {
-    arg = binaryCompExpr();
+    arg = booleanCompExpr();
     return arg;
   }
   default:
@@ -325,7 +350,7 @@ bool Parser::binaryPrimary() {
   }
 }
 
-bool Parser::binaryCompExpr() {
+bool Parser::booleanCompExpr() {
   std::string loc;
 
   double result = addExpr();

@@ -145,6 +145,7 @@ Token Lexer::getToken() {
   case '^':
   case '(':
   case ')':
+  case ';':
     return Token(c);
   }
 

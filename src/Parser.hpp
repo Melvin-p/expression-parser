@@ -9,13 +9,20 @@
 class Parser {
 public:
   Parser();
-  void operator()(std::string &s);
+
+  void evalArithmetic(std::string &s);
+  /*
+  TODO
+  integrate with arithmetic parser
+  type information in symbol table
+  */
+  bool evalBoolean(std::string &s);
 
 private:
   std::unique_ptr<Lexer> m_lexer;
   std::map<const std::string, double> m_symbol_table;
 
-  double assignExpr();
+  void assignExpr();
   [[nodiscard]] double addExpr();
   double mulExpr();
   double powExpr();
@@ -23,10 +30,10 @@ private:
   double primary();
   double getArgument();
 
-  [[nodiscard]] bool binaryExpr();
-  bool binaryUnaryExpr();
-  bool binaryCompExpr();
-  bool binaryPrimary();
+  [[nodiscard]] bool booleanExpr();
+  bool booleanUnaryExpr();
+  bool booleanCompExpr();
+  bool booleanPrimary();
 
   void checkDomain(double x, double y);
 };
