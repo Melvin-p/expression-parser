@@ -3,8 +3,9 @@
 #include "Lexer.hpp"
 #include "tokens.hpp"
 #include <cmath>
-#include <iostream>
+#include <iomanip>
 #include <sstream>
+#include <string>
 
 namespace {
 inline double to_number(std::string &s) {
@@ -52,7 +53,8 @@ void Parser::evalArithmetic(std::string &s) {
       throw SyntaxError{"Missing semicolon", loc};
     }
     if (output) {
-      std::cout << out << "\n";
+      m_buffer << std::setprecision(4) << out;
+      m_buffer << "\n";
     }
     m_lexer->advance();
   } while (m_lexer->getCurrentToken() != Token::EOF_sym);
@@ -378,3 +380,11 @@ bool Parser::booleanCompExpr() {
   }
   }
 }
+
+std::ostream &operator<<(std::ostream &os, Parser &parser) {
+  os << parser.m_buffer.str();
+  parser.m_buffer.str(std::string{});
+  return os;
+}
+
+void operator>>(std::string &s, Parser &parser) { parser.evalArithmetic(s); }

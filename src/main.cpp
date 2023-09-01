@@ -18,7 +18,8 @@ int main() {
       break;
     } else {
       try {
-        parser.evalArithmetic(buffer);
+        buffer >> parser;
+        std::cout << parser;
       } catch (const std::exception &e) {
         std::cerr << e.what() << "\n";
       }
