@@ -26,7 +26,7 @@ public:
 
 class RuntimeError : public std::exception {
 private:
-  std::string m_message{"Runtime Error"};
+  std::string m_message{"Runtime Error\n"};
 
 public:
   RuntimeError(std::string message, std::string location);

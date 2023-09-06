@@ -5,11 +5,12 @@
         "--graphviz=${workspaceFolder}/build/${buildType}/target_graph.dot"
     ],
     "cmake.buildDirectory": "${workspaceFolder}/build/${buildType}",
-	"cmake.copyCompileCommands": "${workspaceFolder}/compile_commands.json",
+    "cmake.copyCompileCommands": "${workspaceFolder}/compile_commands.json",
     "cmake.configureSettings": {
         "CMAKE_EXPORT_COMPILE_COMMANDS": true,
         "CMAKE_CXX_EXTENSIONS": false,
-        "C_EXTENSIONS": false
+        "C_EXTENSIONS": false,
+        "CMAKE_TOOLCHAIN_FILE": "${env:vcpkg}/scripts/buildsystems/vcpkg.cmake",
     },
     "cmake.preferredGenerators": [
         "Ninja",

@@ -17,6 +17,7 @@ public:
   type information in symbol table
   */
   bool evalBoolean(std::string &s);
+  std::string getResult();
   friend std::ostream &operator<<(std::ostream &os, Parser &parser);
   friend void operator>>(std::string &s, Parser &parser);
 

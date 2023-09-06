@@ -387,4 +387,10 @@ std::ostream &operator<<(std::ostream &os, Parser &parser) {
   return os;
 }
 
+std::string Parser::getResult() {
+  std::string out{m_buffer.str()};
+  m_buffer.str(std::string{});
+  return out;
+}
+
 void operator>>(std::string &s, Parser &parser) { parser.evalArithmetic(s); }
