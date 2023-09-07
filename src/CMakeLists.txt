@@ -26,5 +26,6 @@ find_package(doctest CONFIG)
 
 if(${doctest_FOUND})
     add_executable("tests" tests.cpp)
-    target_link_libraries("tests" PRIVATE doctest::doctest "expression-parser") 
+    target_link_libraries("tests" PRIVATE doctest::doctest "expression-parser")
+    add_test(NAME "tests" COMMAND "tests")
 endif()

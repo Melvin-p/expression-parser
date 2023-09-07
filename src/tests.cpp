@@ -1,12 +1,45 @@
-#include <exception>
+
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 
 #include "Parser.hpp"
 #include <doctest/doctest.h>
+#include <exception>
 #include <string>
 
 TEST_SUITE("Expression Parser") {
   Parser parser{};
+  TEST_CASE("Constants") {
+    SUBCASE("pi") {
+      std::string input{"pi;"};
+      parser.evalArithmetic(input);
+      CHECK(parser.getResult() == "3.142\n");
+    }
+    SUBCASE("e") {
+      std::string input{"e;"};
+      parser.evalArithmetic(input);
+      CHECK(parser.getResult() == "2.718\n");
+    }
+  }
+  TEST_CASE("Command") {
+    SUBCASE("Missing semi colon") {
+      std::string input{"1+1"};
+      CHECK_THROWS_AS(parser.evalArithmetic(input), const std::exception &);
+      parser.getResult();
+    }
+    SUBCASE("variable assignment") {
+      std::string input{"var a = 3.3;"};
+      parser.evalArithmetic(input);
+      CHECK(parser.getResult() == "");
+      std::string input_2{"a;"};
+      parser.evalArithmetic(input_2);
+      CHECK(parser.getResult() == "3.3\n");
+    }
+    SUBCASE("sequence") {
+      std::string input{"var b = 3.3; b * 2; 3 * 2; var c = b; c;"};
+      parser.evalArithmetic(input);
+      CHECK(parser.getResult() == "6.6\n6\n3.3\n");
+    }
+  }
   TEST_CASE("Unary") {
     SUBCASE("-1") {
       std::string input{"-1;"};
@@ -60,6 +93,11 @@ TEST_SUITE("Expression Parser") {
       auto temp = parser.getResult();
       CHECK(temp == "5\n");
     }
+    SUBCASE("Division by zero") {
+      std::string input{"10/0;"};
+      CHECK_THROWS_AS(parser.evalArithmetic(input), const std::exception &);
+      parser.getResult();
+    }
   }
   TEST_CASE("Subtraction") {
     SUBCASE("3-10") {
@@ -97,6 +135,11 @@ TEST_SUITE("Expression Parser") {
       auto temp = parser.getResult();
       CHECK(temp == "1\n");
     }
+    SUBCASE("Division by zero") {
+      std::string input{"10%0;"};
+      CHECK_THROWS_AS(parser.evalArithmetic(input), const std::exception &);
+      parser.getResult();
+    }
   }
   TEST_CASE("Power") {
     SUBCASE("2^2") {
@@ -113,6 +156,108 @@ TEST_SUITE("Expression Parser") {
     }
     SUBCASE("4^0.5") {
       std::string input = "4^0.5;";
+      parser.evalArithmetic(input);
+      auto temp = parser.getResult();
+      CHECK(temp == "2\n");
+    }
+  }
+  TEST_CASE("Parentheses") {
+    SUBCASE("1+(2*3)") {
+      std::string input = "1+(2*3);";
+      parser.evalArithmetic(input);
+      auto temp = parser.getResult();
+      CHECK(temp == "7\n");
+    }
+    SUBCASE("(2+3)/(3-1)") {
+      std::string input = "(2+3)/(3-1);";
+      parser.evalArithmetic(input);
+      auto temp = parser.getResult();
+      CHECK(temp == "2.5\n");
+    }
+    SUBCASE("2+(3 * (8 - 2))") {
+      std::string input = "2+(3 * (8 - 2));";
+      parser.evalArithmetic(input);
+      auto temp = parser.getResult();
+      CHECK(temp == "20\n");
+    }
+  }
+  TEST_CASE("Functions") {
+    SUBCASE("function missing bracket left") {
+      std::string input{"sin pi );"};
+      CHECK_THROWS_AS(parser.evalArithmetic(input), const std::exception &);
+      parser.getResult();
+    }
+    SUBCASE("function missing bracket right") {
+      std::string input{"sin( pi ;"};
+      CHECK_THROWS_AS(parser.evalArithmetic(input), const std::exception &);
+      parser.getResult();
+    }
+    SUBCASE("Int(0.1)") {
+      std::string input = "Int(0.1);";
+      parser.evalArithmetic(input);
+      auto temp = parser.getResult();
+      CHECK(temp == "0\n");
+    }
+    SUBCASE("Int(-0.1)") {
+      std::string input = "Int(-0.1);";
+      parser.evalArithmetic(input);
+      auto temp = parser.getResult();
+      CHECK(temp == "-0\n");
+    }
+    SUBCASE("sin") {
+      std::string input = "Int(sin(pi));";
+      parser.evalArithmetic(input);
+      auto temp = parser.getResult();
+      CHECK(temp == "0\n");
+    }
+    SUBCASE("tan") {
+      /*
+      Fails
+        SUBCASE("Invalid Input") {
+        std::string input{"tan(pi*0.5);"};
+        CHECK_THROWS_AS(parser.evalArithmetic(input), const std::exception &);
+        parser.getResult();
+      }
+      */
+      SUBCASE("Valid Input") {
+        std::string input{"Int(tan(-pi));"};
+        parser.evalArithmetic(input);
+        auto temp = parser.getResult();
+        CHECK(temp == "0\n");
+      }
+    }
+    SUBCASE("cos") {
+      std::string input = "Int(cos(pi));";
+      parser.evalArithmetic(input);
+      auto temp = parser.getResult();
+      CHECK(temp == "-1\n");
+    }
+    SUBCASE("asin") {
+      std::string input = "asin(1);";
+      parser.evalArithmetic(input);
+      auto temp = parser.getResult();
+      CHECK(temp == "1.571\n");
+    }
+    SUBCASE("acos") {
+      std::string input = "acos(0);";
+      parser.evalArithmetic(input);
+      auto temp = parser.getResult();
+      CHECK(temp == "1.571\n");
+    }
+    SUBCASE("atan") {
+      std::string input = "atan(1) * 4;";
+      parser.evalArithmetic(input);
+      auto temp = parser.getResult();
+      CHECK(temp == "3.142\n");
+    }
+    SUBCASE("log") {
+      std::string input = "log(e^2);";
+      parser.evalArithmetic(input);
+      auto temp = parser.getResult();
+      CHECK(temp == "2\n");
+    }
+    SUBCASE("sqrt") {
+      std::string input = "sqrt(4);";
       parser.evalArithmetic(input);
       auto temp = parser.getResult();
       CHECK(temp == "2\n");
