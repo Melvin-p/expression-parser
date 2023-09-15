@@ -4,15 +4,17 @@
 #include "tokens.hpp"
 #include <cstddef>
 #include <sstream>
+#include <stack>
 #include <string>
 
 class Lexer {
 private:
   std::istringstream m_iss;
   std::string m_buffer;
-  Token m_cur_token;
   std::size_t m_postion{};
   std::size_t m_line{};
+  TokenData m_cur_token;
+  std::stack<TokenData> m_tokenBuffer{};
 
 public:
   explicit Lexer(std::istringstream &&ss);
@@ -21,15 +23,16 @@ public:
   Lexer(Lexer &&) = delete;
   Lexer &operator=(Lexer &&) = delete;
 
-  Token getCurrentToken() const;
-  std::string getCurrentTokenText() const;
+  const TokenData getCurrentToken() const;
+
   /*move to the next token*/
   void advance();
-  std::string getLocation() const;
+
+  void pushBackToken(TokenData token);
 
 private:
   /*get the next token in the stream*/
-  Token getToken();
+  const TokenData getToken();
 };
 
 #endif

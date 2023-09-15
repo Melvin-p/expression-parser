@@ -27,12 +27,12 @@ void Parser::evalArithmetic(std::string &s) {
   do {
     double out{};
     bool output{false};
-    switch (m_lexer->getCurrentToken()) {
+    switch (m_lexer->getCurrentToken().m_token) {
     case Token::Var: {
       m_lexer->advance();
-      if (m_lexer->getCurrentToken() != Token::Id) {
-        auto loc = m_lexer->getLocation();
-        throw SyntaxError{"Missing identifier", loc};
+      auto val = m_lexer->getCurrentToken();
+      if (val.m_token != Token::Id) {
+        throw SyntaxError{"Missing identifier", val.getLocation()};
       }
       assignExpr();
       break;
@@ -48,16 +48,16 @@ void Parser::evalArithmetic(std::string &s) {
       break;
     }
     }
-    if (m_lexer->getCurrentToken() != Token::Semicolon) {
-      auto loc = m_lexer->getLocation();
-      throw SyntaxError{"Missing semicolon", loc};
+    auto val = m_lexer->getCurrentToken();
+    if (val.m_token != Token::Semicolon) {
+      throw SyntaxError{"Missing semicolon", val.getLocation()};
     }
     if (output) {
       m_buffer << std::setprecision(4) << out;
       m_buffer << "\n";
     }
     m_lexer->advance();
-  } while (m_lexer->getCurrentToken() != Token::EOF_sym);
+  } while (m_lexer->getCurrentToken().m_token != Token::EOF_sym);
 }
 
 bool Parser::evalBoolean(std::string &s) {
@@ -66,30 +66,33 @@ bool Parser::evalBoolean(std::string &s) {
 }
 
 void Parser::assignExpr() {
-  Token t = m_lexer->getCurrentToken();
-  std::string text = m_lexer->getCurrentTokenText();
+  // get current token should be a variable
+  TokenData t = m_lexer->getCurrentToken();
+  std::string text = t.getText();
+
+  // move to next token should be a assignment operator
   m_lexer->advance();
 
-  if (m_lexer->getCurrentToken() == Token::Assign) {
-    auto loc = m_lexer->getLocation();
-    if (t != Token::Id) {
-      throw SyntaxError{"Target of assignment must be an identifier", loc};
+  TokenData token_assign = m_lexer->getCurrentToken();
+  if (token_assign.m_token == Token::Assign) {
+
+    if (t.m_token != Token::Id) {
+      throw SyntaxError{"Target of assignment must be an identifier", t.getLocation()};
     }
     if (text == "pi" || text == "e") {
-      throw SyntaxError{"Attempted to modify built in constants", loc};
+      throw SyntaxError{"Attempted to modify built in constants", t.getLocation()};
     }
     m_lexer->advance();
     m_symbol_table[text] = addExpr();
   } else {
-    auto loc = m_lexer->getLocation();
-    throw SyntaxError{"Missing = after variable name", loc};
+    throw SyntaxError{"Missing = after variable name", token_assign.getLocation()};
   }
 }
 
 double Parser::addExpr() {
   double result = mulExpr();
   for (;;) {
-    switch (m_lexer->getCurrentToken()) {
+    switch (m_lexer->getCurrentToken().m_token) {
     case Token::Plus: {
       m_lexer->advance();
       result += mulExpr();
@@ -112,7 +115,7 @@ double Parser::mulExpr() {
   double x{};
   for (;;) {
     std::string loc;
-    switch (m_lexer->getCurrentToken()) {
+    switch (m_lexer->getCurrentToken().m_token) {
     case Token::Mul: {
       m_lexer->advance();
       result *= powExpr();
@@ -122,7 +125,7 @@ double Parser::mulExpr() {
       m_lexer->advance();
       x = powExpr();
       if (x == 0) {
-        loc = m_lexer->getLocation();
+        loc = m_lexer->getCurrentToken().getLocation();
         throw RuntimeError{"Attempted to divide by zero", loc};
       }
       result /= x;
@@ -132,7 +135,7 @@ double Parser::mulExpr() {
       m_lexer->advance();
       x = powExpr();
       if (x == 0) {
-        loc = m_lexer->getLocation();
+        loc = m_lexer->getCurrentToken().getLocation();
         throw RuntimeError{"Attempted to divide by zero", loc};
       }
       result = std::fmod(result, x);
@@ -147,7 +150,7 @@ double Parser::mulExpr() {
 
 double Parser::powExpr() {
   double result = unaryExpr();
-  if (m_lexer->getCurrentToken() == Token::Pow) {
+  if (m_lexer->getCurrentToken().m_token == Token::Pow) {
     m_lexer->advance();
     double x = unaryExpr();
     checkDomain(result, x);
@@ -157,7 +160,7 @@ double Parser::powExpr() {
 }
 
 double Parser::unaryExpr() {
-  switch (m_lexer->getCurrentToken()) {
+  switch (m_lexer->getCurrentToken().m_token) {
   case Token::Plus: {
     m_lexer->advance();
     return +primary();
@@ -174,11 +177,12 @@ double Parser::unaryExpr() {
 }
 
 double Parser::primary() {
-  std::string text = m_lexer->getCurrentTokenText();
+  TokenData t = m_lexer->getCurrentToken();
+  std::string text = t.getText();
   double arg{};
   std::string loc;
 
-  switch (m_lexer->getCurrentToken()) {
+  switch (t.m_token) {
   case Token::Id:
     m_lexer->advance();
     return m_symbol_table[text];
@@ -190,8 +194,8 @@ double Parser::primary() {
   case Token::Lp:
     m_lexer->advance();
     arg = addExpr();
-    loc = m_lexer->getLocation();
-    if (m_lexer->getCurrentToken() != Token::Rp) {
+    loc = m_lexer->getCurrentToken().getLocation();
+    if (m_lexer->getCurrentToken().m_token != Token::Rp) {
       throw SyntaxError{"missing ) after subexpression", loc};
     }
     m_lexer->advance();
@@ -205,7 +209,7 @@ double Parser::primary() {
     break;
   case Token::Tan:
     arg = getArgument();
-    loc = m_lexer->getLocation();
+    loc = m_lexer->getCurrentToken().getLocation();
     if (cos(arg) == 0) {
       throw RuntimeError{"Invalid argument to tan", loc};
     }
@@ -222,7 +226,7 @@ double Parser::primary() {
     break;
   case Token::Log:
     arg = getArgument();
-    loc = m_lexer->getLocation();
+    loc = m_lexer->getCurrentToken().getLocation();
     if (arg < 1) {
       throw RuntimeError{"Invalid Argument to log", loc};
     }
@@ -230,7 +234,7 @@ double Parser::primary() {
     break;
   case Token::Sqrt:
     arg = getArgument();
-    loc = m_lexer->getLocation();
+    loc = m_lexer->getCurrentToken().getLocation();
     if (arg < 0) {
       throw RuntimeError{"Invalid argument to sqrt", loc};
     }
@@ -245,7 +249,7 @@ double Parser::primary() {
     }
     break;
   default:
-    loc = m_lexer->getLocation();
+    loc = m_lexer->getCurrentToken().getLocation();
     throw SyntaxError{"invalid expression", loc};
   }
 }
@@ -253,15 +257,14 @@ double Parser::primary() {
 double Parser::getArgument() {
   m_lexer->advance();
   std::string loc;
-  if (m_lexer->getCurrentToken() != Token::Lp) {
-    loc = m_lexer->getLocation();
-    throw SyntaxError{"missing ( after function name", loc};
+  if (m_lexer->getCurrentToken().m_token != Token::Lp) {
+    throw SyntaxError{"missing ( after function name", m_lexer->getCurrentToken().getLocation()};
   }
   m_lexer->advance();
   double arg = addExpr();
-  if (m_lexer->getCurrentToken() != Token::Rp) {
-    loc = m_lexer->getLocation();
-    throw SyntaxError{"missing ) after function argument", loc};
+  if (m_lexer->getCurrentToken().m_token != Token::Rp) {
+    throw SyntaxError{"missing ) after function argument",
+                      m_lexer->getCurrentToken().getLocation()};
   }
   m_lexer->advance();
   return arg;
@@ -275,14 +278,14 @@ void Parser::checkDomain(double x, double y) {
   if (e <= 0 || e >= 1) {
     return;
   }
-  std::string loc = m_lexer->getLocation();
+  std::string loc = m_lexer->getCurrentToken().getLocation();
   throw RuntimeError{"attempted to take root of a negative number", loc};
 }
 
 bool Parser::booleanExpr() {
   bool result = booleanUnaryExpr();
   for (;;) {
-    switch (m_lexer->getCurrentToken()) {
+    switch (m_lexer->getCurrentToken().m_token) {
     case Token::And: {
       m_lexer->advance();
       auto temp = booleanUnaryExpr();
@@ -303,7 +306,7 @@ bool Parser::booleanExpr() {
 }
 
 bool Parser::booleanUnaryExpr() {
-  switch (m_lexer->getCurrentToken()) {
+  switch (m_lexer->getCurrentToken().m_token) {
   case Token::Not: {
     m_lexer->advance();
     return !booleanPrimary();
@@ -315,10 +318,11 @@ bool Parser::booleanUnaryExpr() {
 }
 
 bool Parser::booleanPrimary() {
-  std::string text = m_lexer->getCurrentTokenText();
+  TokenData t = m_lexer->getCurrentToken();
+  std::string text = t.getText();
   bool arg{};
   std::string loc;
-  switch (m_lexer->getCurrentToken()) {
+  switch (t.m_token) {
   case Token::Id: {
     m_lexer->advance();
     return static_cast<bool>(m_symbol_table[text]);
@@ -335,8 +339,8 @@ bool Parser::booleanPrimary() {
   case Token::Lp: {
     m_lexer->advance();
     arg = booleanExpr();
-    loc = m_lexer->getLocation();
-    if (m_lexer->getCurrentToken() != Token::Rp) {
+    loc = m_lexer->getCurrentToken().getLocation();
+    if (m_lexer->getCurrentToken().m_token != Token::Rp) {
       throw SyntaxError{"missing ) after subexpression", loc};
     }
     m_lexer->advance();
@@ -347,7 +351,7 @@ bool Parser::booleanPrimary() {
     return arg;
   }
   default:
-    loc = m_lexer->getLocation();
+    loc = m_lexer->getCurrentToken().getLocation();
     throw SyntaxError{"invalid expression", loc};
   }
 }
@@ -357,7 +361,7 @@ bool Parser::booleanCompExpr() {
 
   double result = addExpr();
 
-  switch (m_lexer->getCurrentToken()) {
+  switch (m_lexer->getCurrentToken().m_token) {
   case Token::Equal_to: {
     m_lexer->advance();
     return result == addExpr();
@@ -375,7 +379,7 @@ bool Parser::booleanCompExpr() {
     return result < addExpr();
   }
   default: {
-    loc = m_lexer->getLocation();
+    loc = m_lexer->getCurrentToken().getLocation();
     throw SyntaxError{"invalid comparator", loc};
   }
   }

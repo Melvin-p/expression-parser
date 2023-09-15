@@ -5,15 +5,20 @@
 #include <string>
 
 Lexer::Lexer(std::istringstream &&ss)
-    : m_iss(std::move(ss)), m_buffer(""), m_cur_token(getToken()) {}
+    : m_iss(std::move(ss)), m_buffer(""), m_postion(0), m_line(0), m_cur_token(getToken()) {}
 
-std::string Lexer::getCurrentTokenText() const { return m_buffer; }
+const TokenData Lexer::getCurrentToken() const { return m_cur_token; }
 
-Token Lexer::getCurrentToken() const { return m_cur_token; }
+void Lexer::advance() {
+  if (m_tokenBuffer.empty()) {
+    m_cur_token = getToken();
+  } else {
+    m_cur_token = m_tokenBuffer.top();
+    m_tokenBuffer.pop();
+  }
+};
 
-void Lexer::advance() { m_cur_token = getToken(); };
-
-Token Lexer::getToken() {
+const TokenData Lexer::getToken() {
   m_buffer.clear();
   int c = m_iss.get();
   if (c == '\n') {
@@ -32,7 +37,7 @@ Token Lexer::getToken() {
     }
   }
   if (!m_iss) {
-    return Token::EOF_sym;
+    return {Token::EOF_sym, m_postion, m_line, m_buffer};
   }
   if (std::isalpha(c)) {
     m_buffer.push_back(static_cast<char>(c));
@@ -46,68 +51,54 @@ Token Lexer::getToken() {
     m_iss.putback(static_cast<char>(c));
     --m_postion;
 
+    Token out{};
+
     if (m_buffer == "sin") {
-      return Token::Sin;
+      out = Token::Sin;
+    } else if (m_buffer == "cos") {
+      out = Token::Cos;
+    } else if (m_buffer == "tan") {
+      out = Token::Tan;
+    } else if (m_buffer == "asin") {
+      out = Token::Asin;
+    } else if (m_buffer == "acos") {
+      out = Token::Acos;
+    } else if (m_buffer == "atan") {
+      out = Token::Atan;
+    } else if (m_buffer == "log") {
+      out = Token::Log;
+    } else if (m_buffer == "sqrt") {
+      out = Token::Sqrt;
+    } else if (m_buffer == "Int") {
+      out = Token::Int;
+    } else if (m_buffer == "equal_to") {
+      out = Token::Equal_to;
+    } else if (m_buffer == "not_equal_to") {
+      out = Token::Not_equal_to;
+    } else if (m_buffer == "less_than") {
+      out = Token::Less_than;
+    } else if (m_buffer == "greater_than") {
+      out = Token::Greater_than;
+    } else if (m_buffer == "true") {
+      out = Token::True;
+    } else if (m_buffer == "false") {
+      out = Token::False;
+    } else if (m_buffer == "and") {
+      out = Token::And;
+    } else if (m_buffer == "or") {
+      out = Token::Or;
+    } else if (m_buffer == "not") {
+      out = Token::Not;
+    } else if (m_buffer == "var") {
+      out = Token::Var;
+    } else if (m_buffer == "Print") {
+      out = Token::Print;
+    } else {
+      // must be an identifier
+      out = Token::Id;
     }
-    if (m_buffer == "cos") {
-      return Token::Cos;
-    }
-    if (m_buffer == "tan") {
-      return Token::Tan;
-    }
-    if (m_buffer == "asin") {
-      return Token::Asin;
-    }
-    if (m_buffer == "acos") {
-      return Token::Acos;
-    }
-    if (m_buffer == "atan") {
-      return Token::Atan;
-    }
-    if (m_buffer == "log") {
-      return Token::Log;
-    }
-    if (m_buffer == "sqrt") {
-      return Token::Sqrt;
-    }
-    if (m_buffer == "Int") {
-      return Token::Int;
-    }
-    if (m_buffer == "equal_to") {
-      return Token::Equal_to;
-    }
-    if (m_buffer == "not_equal_to") {
-      return Token::Not_equal_to;
-    }
-    if (m_buffer == "less_than") {
-      return Token::Less_than;
-    }
-    if (m_buffer == "greater_than") {
-      return Token::Greater_than;
-    }
-    if (m_buffer == "true") {
-      return Token::True;
-    }
-    if (m_buffer == "false") {
-      return Token::False;
-    }
-    if (m_buffer == "and") {
-      return Token::And;
-    }
-    if (m_buffer == "or") {
-      return Token::Or;
-    }
-    if (m_buffer == "not") {
-      return Token::Not;
-    }
-    if (m_buffer == "var") {
-      return Token::Var;
-    }
-    if (m_buffer == "Print") {
-      return Token::Print;
-    }
-    // must be an identifier
-    return Token::Id;
+
+    return {out, m_postion, m_line, m_buffer};
   }
   // number or decimal
   if (std::isdigit(c)) {
@@ -132,7 +123,7 @@ Token Lexer::getToken() {
     }
     m_iss.putback(static_cast<char>(c));
     --m_postion;
-    return Token::Number;
+    return {Token::Number, m_postion, m_line, m_buffer};
   }
   m_buffer.push_back(static_cast<char>(c));
   switch (c) {
@@ -146,16 +137,15 @@ Token Lexer::getToken() {
   case '(':
   case ')':
   case ';':
-    return Token(c);
+    return {Token(c), m_postion, m_line, m_buffer};
   }
 
-  throw LexicalError{m_buffer, getLocation()};
-}
-
-std::string Lexer::getLocation() const {
   std::string out{"Line: "};
   out.append(std::to_string(m_line));
   out.append(" Postion: ");
   out.append(std::to_string(m_postion));
-  return out;
+
+  throw LexicalError{m_buffer, out};
 }
+
+void Lexer::pushBackToken(TokenData token) { m_tokenBuffer.push(token); }
