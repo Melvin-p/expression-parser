@@ -8,6 +8,8 @@ Implemented using a recursive decent parser
 - `Print(a);`
 - `var c = (2*3)+((8/2)^3);`
 - `var c = -34; var p = 231; Print(p / c);`
+- `3 + 2 - (8 * 4) greater_than 100 or true`
+- `true; false; true and not false and true;`
 
 ### features  
 - Unary Operators `+` `-`
@@ -15,7 +17,14 @@ Implemented using a recursive decent parser
 - Functions `sin` `cos` `tan` `asin` `acos` `atan` `log` `sqrt` `Int` `Print`
 - Parentheses  `(` `)`  
 - variables
+- booleans `true` `false`
+- boolean logical operators `and` `or` `not`
+- comparison operators `equal_to` `not_equal_to` `less_than` `greater_than`
 
+### todo
+- write more tests
+- better floating point error handling
+- add variable typing
 
 ### References:  
 https://unclechromedome.org/c++-tutorials/expression-parser/index.html

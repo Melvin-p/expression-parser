@@ -263,4 +263,52 @@ TEST_SUITE("Expression Parser") {
       CHECK(temp == "2\n");
     }
   }
+  TEST_CASE("Boolean") {
+    SUBCASE("AND") {
+      std::string input = "true and true;";
+      parser.evalArithmetic(input);
+      auto temp = parser.getResult();
+      CHECK(temp == "1\n");
+      input = "true and false;";
+      parser.evalArithmetic(input);
+      temp = parser.getResult();
+      CHECK(temp == "0\n");
+      input = "false and false;";
+      parser.evalArithmetic(input);
+      temp = parser.getResult();
+      CHECK(temp == "0\n");
+      input = "false and true;";
+      parser.evalArithmetic(input);
+      temp = parser.getResult();
+      CHECK(temp == "0\n");
+    }
+    SUBCASE("OR") {
+      std::string input = "true or true;";
+      parser.evalArithmetic(input);
+      auto temp = parser.getResult();
+      CHECK(temp == "1\n");
+      input = "true or false;";
+      parser.evalArithmetic(input);
+      temp = parser.getResult();
+      CHECK(temp == "1\n");
+      input = "false or false;";
+      parser.evalArithmetic(input);
+      temp = parser.getResult();
+      CHECK(temp == "0\n");
+      input = "false or true;";
+      parser.evalArithmetic(input);
+      temp = parser.getResult();
+      CHECK(temp == "1\n");
+    }
+    SUBCASE("not") {
+      std::string input = "not true;";
+      parser.evalArithmetic(input);
+      auto temp = parser.getResult();
+      CHECK(temp == "0\n");
+      input = "not false;";
+      parser.evalArithmetic(input);
+      temp = parser.getResult();
+      CHECK(temp == "1\n");
+    }
+  }
 }
