@@ -2,10 +2,15 @@
 #include "Errors.hpp"
 #include "Lexer.hpp"
 #include "tokens.hpp"
+#include <cfenv>
 #include <cmath>
 #include <iomanip>
 #include <sstream>
 #include <string>
+
+#if !(math_errhandling & MATH_ERREXCEPT)
+#error "no floating point exceptions"
+#endif
 
 namespace {
 inline double to_number(std::string &s) {
@@ -15,12 +20,29 @@ inline double to_number(std::string &s) {
   iss >> x;
   return x;
 }
+std::unique_ptr<Lexer> m_lexer;
 } // namespace
 
 Parser::Parser() {
   m_symbol_table["pi"] = 4.0 * std::atan(1.0);
   m_symbol_table["e"] = std::exp(1.0);
+  m_symbol_table["nan"] = std::numeric_limits<double>::quiet_NaN();
+  m_symbol_table["inf"] = std::numeric_limits<double>::infinity();
 }
+
+std::string Parser::getResult() {
+  std::string out{m_buffer.str()};
+  m_buffer.str(std::string{});
+  return out;
+}
+
+std::ostream &operator<<(std::ostream &os, Parser &parser) {
+  os << parser.m_buffer.str();
+  parser.m_buffer.str(std::string{});
+  return os;
+}
+
+void operator>>(std::string &s, Parser &parser) { parser.evalArithmetic(s); }
 
 void Parser::evalArithmetic(std::string &s) {
   m_lexer = std::make_unique<Lexer>(std::istringstream{s});
@@ -74,7 +96,7 @@ void Parser::assignExpr() {
     if (t.m_token != Token::Id) {
       throw SyntaxError{"Target of assignment must be an identifier", t.getLocation()};
     }
-    if (text == "pi" || text == "e") {
+    if (text == "pi" || text == "e" || text == "nan" || text == "inf") {
       throw SyntaxError{"Attempted to modify built in constants", t.getLocation()};
     }
     m_lexer->advance();
@@ -209,10 +231,15 @@ double Parser::mulExpr() {
 double Parser::powExpr() {
   double result = unaryExpr();
   if (m_lexer->getCurrentToken().m_token == Token::Pow) {
+    std::string loc{m_lexer->getCurrentToken().getLocation()};
     m_lexer->advance();
     double x = unaryExpr();
-    checkDomain(result, x);
+    std::feclearexcept(FE_ALL_EXCEPT);
     result = std::pow(result, x);
+    if (std::fetestexcept(FE_INVALID) || std::fetestexcept(FE_DIVBYZERO) || std::isnan(result) ||
+        std::isinf(result)) {
+      throw RuntimeError{"Bad power operation", loc};
+    }
   }
   return result;
 }
@@ -238,16 +265,16 @@ double Parser::primary() {
   TokenData t = m_lexer->getCurrentToken();
   std::string text = t.getText();
   double arg{};
-  std::string loc;
+  std::string loc{t.getLocation()};
+  double result{};
 
   switch (t.m_token) {
   case Token::Id:
-    loc = m_lexer->getCurrentToken().getLocation();
     m_lexer->advance();
     if (m_symbol_table.find(text) != m_symbol_table.end()) {
       return m_symbol_table[text];
     } else {
-      throw RuntimeError{"variable not found", loc};
+      throw RuntimeError{"variable does not exist yet", loc};
     }
     break;
   case Token::Number:
@@ -273,45 +300,88 @@ double Parser::primary() {
     return arg;
     break;
   case Token::Sin:
-    return std::sin(getArgument());
+    arg = getArgument();
+    std::feclearexcept(FE_ALL_EXCEPT);
+    result = std::sin(arg);
+    if (std::fetestexcept(FE_INVALID) || std::isnan(result) || std::isinf(result)) {
+      throw RuntimeError{"Invalid argument to sin", loc};
+    } else {
+      return result;
+    }
     break;
   case Token::Cos:
-    return std::cos(getArgument());
+    arg = getArgument();
+    std::feclearexcept(FE_ALL_EXCEPT);
+    result = std::cos(arg);
+    if (std::fetestexcept(FE_INVALID) || std::isnan(result) || std::isinf(result)) {
+      throw RuntimeError{"Invalid argument to cos", loc};
+    } else {
+      return result;
+    }
     break;
   case Token::Tan:
     arg = getArgument();
-    loc = m_lexer->getCurrentToken().getLocation();
-    if (cos(arg) == 0) {
+    std::feclearexcept(FE_ALL_EXCEPT);
+    result = std::tan(arg);
+    if (std::fetestexcept(FE_INVALID) || std::isnan(result) || std::isinf(result)) {
       throw RuntimeError{"Invalid argument to tan", loc};
+    } else {
+      return result;
     }
-    return std::tan(arg);
     break;
   case Token::Asin:
-    return std::asin(getArgument());
+    arg = getArgument();
+    std::feclearexcept(FE_ALL_EXCEPT);
+    result = std::asin(arg);
+    if (std::fetestexcept(FE_INVALID) || std::isnan(result) || std::isinf(result)) {
+      throw RuntimeError{"Invalid argument to asin", loc};
+    } else {
+      return result;
+    }
     break;
   case Token::Acos:
-    return std::acos(getArgument());
+    arg = getArgument();
+    std::feclearexcept(FE_ALL_EXCEPT);
+    result = std::acos(arg);
+    if (std::fetestexcept(FE_INVALID) || std::isnan(result) || std::isinf(result)) {
+      throw RuntimeError{"Invalid argument to acos", loc};
+    } else {
+      return result;
+    }
     break;
   case Token::Atan:
-    return std::atan(getArgument());
+    arg = getArgument();
+    std::feclearexcept(FE_ALL_EXCEPT);
+    result = std::atan(arg);
+    if (std::isnan(result) || std::isinf(result)) {
+      throw RuntimeError{"Invalid argument to atan", loc};
+    } else {
+      return result;
+    }
     break;
   case Token::Log:
     arg = getArgument();
-    loc = m_lexer->getCurrentToken().getLocation();
-    if (arg < 1) {
-      throw RuntimeError{"Invalid Argument to log", loc};
+    std::feclearexcept(FE_ALL_EXCEPT);
+    result = std::log(arg);
+    if (std::fetestexcept(FE_INVALID) || std::fetestexcept(FE_DIVBYZERO) || std::isnan(result) ||
+        std::isinf(result)) {
+      throw RuntimeError{"Invalid argument to log", loc};
+    } else {
+      return result;
     }
-    return std::log(arg);
     break;
   case Token::Sqrt:
     arg = getArgument();
-    loc = m_lexer->getCurrentToken().getLocation();
-    if (arg < 0) {
+    std::feclearexcept(FE_ALL_EXCEPT);
+    result = std::sqrt(arg);
+    if (std::fetestexcept(FE_INVALID) || std::isnan(result) || std::isinf(result)) {
       throw RuntimeError{"Invalid argument to sqrt", loc};
+    } else {
+      return result;
     }
-    return std::sqrt(arg);
     break;
   case Token::Int:
+    // round towards zero
     arg = getArgument();
     if (arg < 0) {
       return std::ceil(arg);
@@ -320,7 +390,6 @@ double Parser::primary() {
     }
     break;
   default:
-    loc = m_lexer->getCurrentToken().getLocation();
     throw SyntaxError{"invalid expression", loc};
   }
 }
@@ -340,29 +409,3 @@ double Parser::getArgument() {
   m_lexer->advance();
   return arg;
 }
-
-void Parser::checkDomain(double x, double y) {
-  if (x >= 0) {
-    return;
-  }
-  double e = std::abs(y);
-  if (e <= 0 || e >= 1) {
-    return;
-  }
-  std::string loc = m_lexer->getCurrentToken().getLocation();
-  throw RuntimeError{"attempted to take root of a negative number", loc};
-}
-
-std::ostream &operator<<(std::ostream &os, Parser &parser) {
-  os << parser.m_buffer.str();
-  parser.m_buffer.str(std::string{});
-  return os;
-}
-
-std::string Parser::getResult() {
-  std::string out{m_buffer.str()};
-  m_buffer.str(std::string{});
-  return out;
-}
-
-void operator>>(std::string &s, Parser &parser) { parser.evalArithmetic(s); }

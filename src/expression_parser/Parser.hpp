@@ -1,7 +1,6 @@
 #ifndef PARSER_HPP
 #define PARSER_HPP
 
-#include "Lexer.hpp"
 #include <memory>
 #include <sstream>
 #include <unordered_map>
@@ -16,7 +15,6 @@ public:
   friend void operator>>(std::string &s, Parser &parser);
 
 private:
-  std::unique_ptr<Lexer> m_lexer;
   std::unordered_map<std::string, double> m_symbol_table{};
   std::stringstream m_buffer{};
 
@@ -30,8 +28,6 @@ private:
   double unaryExpr();
   double primary();
   double getArgument();
-
-  void checkDomain(double x, double y);
 };
 
 #endif

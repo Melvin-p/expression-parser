@@ -2,7 +2,7 @@
 
 Implemented using a recursive decent parser
 
-### some examples examples
+### some examples
 - `var a = 10;`
 - `var a = sin(pi);`
 - `Print(a);`
