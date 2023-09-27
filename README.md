@@ -23,8 +23,6 @@ Implemented using a recursive decent parser
 
 ### todo
 - write more tests
-- better floating point error handling
-- add variable typing
 
 ### References:  
 https://unclechromedome.org/c++-tutorials/expression-parser/index.html

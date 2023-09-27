@@ -2,6 +2,7 @@
 #include "Errors.hpp"
 #include "Lexer.hpp"
 #include "tokens.hpp"
+#include <cassert>
 #include <cfenv>
 #include <cmath>
 #include <iomanip>
@@ -47,7 +48,7 @@ void operator>>(std::string &s, Parser &parser) { parser.evalArithmetic(s); }
 void Parser::evalArithmetic(std::string &s) {
   m_lexer = std::make_unique<Lexer>(std::istringstream{s});
   do {
-    double out{};
+    var out{};
     bool output{false};
     switch (m_lexer->getCurrentToken().m_token) {
     case Token::Var: {
@@ -75,7 +76,15 @@ void Parser::evalArithmetic(std::string &s) {
       throw SyntaxError{"Missing semicolon", val.getLocation()};
     }
     if (output) {
-      m_buffer << std::setprecision(4) << out;
+      auto first = std::get_if<bool>(&out);
+      auto second = std::get_if<double>(&out);
+      if (first != nullptr) {
+        m_buffer << std::setprecision(4) << *first;
+      } else if (second != nullptr) {
+        m_buffer << std::setprecision(4) << *second;
+      } else {
+        assert(false);
+      }
       m_buffer << "\n";
     }
     m_lexer->advance();
@@ -100,40 +109,72 @@ void Parser::assignExpr() {
       throw SyntaxError{"Attempted to modify built in constants", t.getLocation()};
     }
     m_lexer->advance();
-    m_symbol_table[text] = booleanExpr();
+    var second = booleanExpr();
+    if (m_symbol_table.find(text) == m_symbol_table.end()) {
+      m_symbol_table[text] = second;
+    } else {
+      var first = m_symbol_table[text];
+      if (first.index() == second.index()) {
+        m_symbol_table[text] = second;
+      } else {
+        throw RuntimeError{"bad assignment wrong data types", t.getLocation()};
+      }
+    }
   } else {
     throw SyntaxError{"Missing = after variable name", token_assign.getLocation()};
   }
 }
 
-double Parser::booleanExpr() {
-  double result = booleanUnaryExpr();
+Parser::var Parser::booleanExpr() {
+  var result = booleanUnaryExpr();
   for (;;) {
-    switch (m_lexer->getCurrentToken().m_token) {
+    TokenData token{m_lexer->getCurrentToken()};
+    std::string loc{token.getLocation()};
+    switch (token.m_token) {
     case Token::And: {
       m_lexer->advance();
       auto temp = booleanUnaryExpr();
-      result = result && temp;
+      auto first = std::get_if<bool>(&result);
+      auto second = std::get_if<bool>(&temp);
+      if (first == nullptr || second == nullptr) {
+        throw RuntimeError{"bad `and` wrong data types", loc};
+      } else {
+        result = {*first && *second};
+      }
       break;
     }
     case Token::Or: {
       m_lexer->advance();
       auto temp = booleanUnaryExpr();
-      result = result || temp;
+      auto first = std::get_if<bool>(&result);
+      auto second = std::get_if<bool>(&temp);
+      if (first == nullptr || second == nullptr) {
+        throw RuntimeError{"bad `or` wrong data types", loc};
+      } else {
+        result = {*first || *second};
+      }
       break;
     }
     default: {
-      return result;
+      return {result};
     }
     }
   }
 }
 
-double Parser::booleanUnaryExpr() {
-  switch (m_lexer->getCurrentToken().m_token) {
+Parser::var Parser::booleanUnaryExpr() {
+  TokenData token{m_lexer->getCurrentToken()};
+  std::string loc{token.getLocation()};
+  switch (token.m_token) {
   case Token::Not: {
     m_lexer->advance();
-    return !comparisonExpr();
+    var result = comparisonExpr();
+    auto first = std::get_if<bool>(&result);
+    if (first == nullptr) {
+      throw RuntimeError{"bad `not` wrong data type", loc};
+    } else {
+      return {!(*first)};
+    }
   }
   default: {
     return comparisonExpr();
@@ -141,46 +182,89 @@ double Parser::booleanUnaryExpr() {
   }
 }
 
-double Parser::comparisonExpr() {
-  std::string loc;
-
-  double result = addExpr();
-
-  switch (m_lexer->getCurrentToken().m_token) {
+Parser::var Parser::comparisonExpr() {
+  var result = addExpr();
+  TokenData token{m_lexer->getCurrentToken()};
+  std::string loc{token.getLocation()};
+  switch (token.m_token) {
   case Token::Equal_to: {
     m_lexer->advance();
-    return result == addExpr();
+    auto temp = addExpr();
+    auto first = std::get_if<double>(&result);
+    auto second = std::get_if<double>(&temp);
+    if (first == nullptr || second == nullptr) {
+      throw RuntimeError{"bad `equals` wrong data types", loc};
+    } else {
+      return {*first == *second};
+    }
   }
   case Token::Not_equal_to: {
     m_lexer->advance();
-    return result != addExpr();
+    auto temp = addExpr();
+    auto first = std::get_if<double>(&result);
+    auto second = std::get_if<double>(&temp);
+    if (first == nullptr || second == nullptr) {
+      throw RuntimeError{"bad `equals` wrong data types", loc};
+    } else {
+      return {*first != *second};
+    }
   }
   case Token::Greater_than: {
     m_lexer->advance();
-    return result > addExpr();
+    auto temp = addExpr();
+    auto first = std::get_if<double>(&result);
+    auto second = std::get_if<double>(&temp);
+    if (first == nullptr || second == nullptr) {
+      throw RuntimeError{"bad `equals` wrong data types", loc};
+    } else {
+      return {*first > *second};
+    }
   }
   case Token::Less_than: {
     m_lexer->advance();
-    return result < addExpr();
+    auto temp = addExpr();
+    auto first = std::get_if<double>(&result);
+    auto second = std::get_if<double>(&temp);
+    if (first == nullptr || second == nullptr) {
+      throw RuntimeError{"bad `equals` wrong data types", loc};
+    } else {
+      return {*first < *second};
+    }
   }
   default: {
-    return result;
+    return {result};
   }
   }
 }
 
-double Parser::addExpr() {
-  double result = mulExpr();
+Parser::var Parser::addExpr() {
+  var result = mulExpr();
   for (;;) {
-    switch (m_lexer->getCurrentToken().m_token) {
+    TokenData token{m_lexer->getCurrentToken()};
+    std::string loc{token.getLocation()};
+    switch (token.m_token) {
     case Token::Plus: {
       m_lexer->advance();
-      result += mulExpr();
+      auto temp = mulExpr();
+      auto first = std::get_if<double>(&result);
+      auto second = std::get_if<double>(&temp);
+      if (first == nullptr || second == nullptr) {
+        throw RuntimeError{"bad `addition` wrong data types", loc};
+      } else {
+        result = { *first += *second};
+      }
       break;
     }
     case Token::Minus: {
       m_lexer->advance();
-      result -= mulExpr();
+      auto temp = mulExpr();
+      auto first = std::get_if<double>(&result);
+      auto second = std::get_if<double>(&temp);
+      if (first == nullptr || second == nullptr) {
+        throw RuntimeError{"bad `subtraction` wrong data types", loc};
+      } else {
+        result = { *first -= *second};
+      }
       break;
     }
     default: {
@@ -190,35 +274,54 @@ double Parser::addExpr() {
   }
 }
 
-double Parser::mulExpr() {
-  double result = powExpr();
-  double x{};
+Parser::var Parser::mulExpr() {
+  var result = powExpr();
   for (;;) {
-    std::string loc;
+    TokenData token{m_lexer->getCurrentToken()};
+    std::string loc{token.getLocation()};
     switch (m_lexer->getCurrentToken().m_token) {
     case Token::Mul: {
       m_lexer->advance();
-      result *= powExpr();
+      auto temp = powExpr();
+      auto first = std::get_if<double>(&result);
+      auto second = std::get_if<double>(&temp);
+      if (first == nullptr || second == nullptr) {
+        throw RuntimeError{"bad `multiplication` wrong data types", loc};
+      } else {
+        result = { *first *= *second};
+      };
       break;
     }
     case Token::Div: {
       m_lexer->advance();
-      x = powExpr();
-      if (x == 0) {
-        loc = m_lexer->getCurrentToken().getLocation();
-        throw RuntimeError{"Attempted to divide by zero", loc};
+      auto temp = powExpr();
+      auto first = std::get_if<double>(&result);
+      auto second = std::get_if<double>(&temp);
+      if (first == nullptr || second == nullptr) {
+        throw RuntimeError{"bad `division` wrong data types", loc};
+      } else {
+        if (*second == 0) {
+          throw RuntimeError{"Attempted to divide by zero", loc};
+        } else {
+          result = {*first / *second};
+        }
       }
-      result /= x;
       break;
     }
     case Token::Mod: {
       m_lexer->advance();
-      x = powExpr();
-      if (x == 0) {
-        loc = m_lexer->getCurrentToken().getLocation();
-        throw RuntimeError{"Attempted to divide by zero", loc};
+      auto temp = powExpr();
+      auto first = std::get_if<double>(&result);
+      auto second = std::get_if<double>(&temp);
+      if (first == nullptr || second == nullptr) {
+        throw RuntimeError{"bad `modulo` wrong data types", loc};
+      } else {
+        if (*second == 0) {
+          throw RuntimeError{"Attempted to divide by zero", loc};
+        } else {
+          result = {std::fmod(*first, *second)};
+        }
       }
-      result = std::fmod(result, x);
       break;
     }
     default: {
@@ -228,32 +331,57 @@ double Parser::mulExpr() {
   }
 }
 
-double Parser::powExpr() {
-  double result = unaryExpr();
-  if (m_lexer->getCurrentToken().m_token == Token::Pow) {
-    std::string loc{m_lexer->getCurrentToken().getLocation()};
+Parser::var Parser::powExpr() {
+  var result = unaryExpr();
+  TokenData token{m_lexer->getCurrentToken()};
+  std::string loc{token.getLocation()};
+  double out{};
+  if (token.m_token == Token::Pow) {
     m_lexer->advance();
-    double x = unaryExpr();
-    std::feclearexcept(FE_ALL_EXCEPT);
-    result = std::pow(result, x);
-    if (std::fetestexcept(FE_INVALID) || std::fetestexcept(FE_DIVBYZERO) || std::isnan(result) ||
-        std::isinf(result)) {
-      throw RuntimeError{"Bad power operation", loc};
+    auto temp = unaryExpr();
+    auto first = std::get_if<double>(&result);
+    auto second = std::get_if<double>(&temp);
+    if (first == nullptr || second == nullptr) {
+      throw RuntimeError{"bad `power` wrong data types", loc};
+    } else {
+      std::feclearexcept(FE_ALL_EXCEPT);
+      out = std::pow(*first, *second);
+      if (std::fetestexcept(FE_INVALID) || std::fetestexcept(FE_DIVBYZERO) || std::isnan(out) ||
+          std::isinf(out)) {
+        throw RuntimeError{"Bad power operation", loc};
+      } else {
+        return {out};
+      }
     }
+  } else {
+    return result;
   }
-  return result;
 }
 
-double Parser::unaryExpr() {
-  switch (m_lexer->getCurrentToken().m_token) {
+Parser::var Parser::unaryExpr() {
+  TokenData token{m_lexer->getCurrentToken()};
+  std::string loc{token.getLocation()};
+  switch (token.m_token) {
   case Token::Plus: {
     m_lexer->advance();
-    return +primary();
+    var result = primary();
+    auto first = std::get_if<double>(&result);
+    if (first == nullptr) {
+      throw RuntimeError{"bad `+` wrong data type", loc};
+    } else {
+      return {+(*first)};
+    }
     break;
   }
   case Token::Minus: {
     m_lexer->advance();
-    return -primary();
+    var result = primary();
+    auto first = std::get_if<double>(&result);
+    if (first == nullptr) {
+      throw RuntimeError{"bad `-` wrong data type", loc};
+    } else {
+      return {-(*first)};
+    }
     break;
   }
   default:
@@ -261,12 +389,13 @@ double Parser::unaryExpr() {
   }
 }
 
-double Parser::primary() {
+Parser::var Parser::primary() {
   TokenData t = m_lexer->getCurrentToken();
   std::string text = t.getText();
-  double arg{};
+  var arg{};
   std::string loc{t.getLocation()};
   double result{};
+  decltype(std::get_if<double>(&arg)) input{};
 
   switch (t.m_token) {
   case Token::Id:
@@ -279,20 +408,19 @@ double Parser::primary() {
     break;
   case Token::Number:
     m_lexer->advance();
-    return to_number(text);
+    return {to_number(text)};
     break;
   case Token::True: {
     m_lexer->advance();
-    return true;
+    return {true};
   }
   case Token::False: {
     m_lexer->advance();
-    return false;
+    return {false};
   }
   case Token::Lp:
     m_lexer->advance();
-    arg = booleanUnaryExpr();
-    loc = m_lexer->getCurrentToken().getLocation();
+    arg = booleanExpr();
     if (m_lexer->getCurrentToken().m_token != Token::Rp) {
       throw SyntaxError{"missing ) after subexpression", loc};
     }
@@ -301,92 +429,137 @@ double Parser::primary() {
     break;
   case Token::Sin:
     arg = getArgument();
-    std::feclearexcept(FE_ALL_EXCEPT);
-    result = std::sin(arg);
-    if (std::fetestexcept(FE_INVALID) || std::isnan(result) || std::isinf(result)) {
-      throw RuntimeError{"Invalid argument to sin", loc};
+    input = std::get_if<double>(&arg);
+    if (input == nullptr) {
+      throw RuntimeError{"wrong data type for sin", loc};
     } else {
-      return result;
+      std::feclearexcept(FE_ALL_EXCEPT);
+      result = std::sin(*input);
+      if (std::fetestexcept(FE_INVALID) || std::isnan(result) || std::isinf(result)) {
+        throw RuntimeError{"Invalid argument to sin", loc};
+      } else {
+        return {result};
+      }
     }
     break;
   case Token::Cos:
     arg = getArgument();
-    std::feclearexcept(FE_ALL_EXCEPT);
-    result = std::cos(arg);
-    if (std::fetestexcept(FE_INVALID) || std::isnan(result) || std::isinf(result)) {
-      throw RuntimeError{"Invalid argument to cos", loc};
+    input = std::get_if<double>(&arg);
+    if (input == nullptr) {
+      throw RuntimeError{"wrong data type for cos", loc};
     } else {
-      return result;
+      std::feclearexcept(FE_ALL_EXCEPT);
+      result = std::cos(*input);
+      if (std::fetestexcept(FE_INVALID) || std::isnan(result) || std::isinf(result)) {
+        throw RuntimeError{"Invalid argument to cos", loc};
+      } else {
+        return {result};
+      }
     }
     break;
   case Token::Tan:
     arg = getArgument();
-    std::feclearexcept(FE_ALL_EXCEPT);
-    result = std::tan(arg);
-    if (std::fetestexcept(FE_INVALID) || std::isnan(result) || std::isinf(result)) {
-      throw RuntimeError{"Invalid argument to tan", loc};
+    input = std::get_if<double>(&arg);
+    if (input == nullptr) {
+      throw RuntimeError{"wrong data type for tan", loc};
     } else {
-      return result;
+      std::feclearexcept(FE_ALL_EXCEPT);
+      result = std::tan(*input);
+      if (std::fetestexcept(FE_INVALID) || std::isnan(result) || std::isinf(result)) {
+        throw RuntimeError{"Invalid argument to tan", loc};
+      } else {
+        return {result};
+      }
     }
     break;
   case Token::Asin:
     arg = getArgument();
-    std::feclearexcept(FE_ALL_EXCEPT);
-    result = std::asin(arg);
-    if (std::fetestexcept(FE_INVALID) || std::isnan(result) || std::isinf(result)) {
-      throw RuntimeError{"Invalid argument to asin", loc};
+    input = std::get_if<double>(&arg);
+    if (input == nullptr) {
+      throw RuntimeError{"wrong data type for asin", loc};
     } else {
-      return result;
+      std::feclearexcept(FE_ALL_EXCEPT);
+      result = std::asin(*input);
+      if (std::fetestexcept(FE_INVALID) || std::isnan(result) || std::isinf(result)) {
+        throw RuntimeError{"Invalid argument to asin", loc};
+      } else {
+        return {result};
+      }
     }
     break;
   case Token::Acos:
     arg = getArgument();
-    std::feclearexcept(FE_ALL_EXCEPT);
-    result = std::acos(arg);
-    if (std::fetestexcept(FE_INVALID) || std::isnan(result) || std::isinf(result)) {
-      throw RuntimeError{"Invalid argument to acos", loc};
+    input = std::get_if<double>(&arg);
+    if (input == nullptr) {
+      throw RuntimeError{"wrong data type for acos", loc};
     } else {
-      return result;
+      std::feclearexcept(FE_ALL_EXCEPT);
+      result = std::acos(*input);
+      if (std::fetestexcept(FE_INVALID) || std::isnan(result) || std::isinf(result)) {
+        throw RuntimeError{"Invalid argument to acos", loc};
+      } else {
+        return {result};
+      }
     }
     break;
   case Token::Atan:
     arg = getArgument();
-    std::feclearexcept(FE_ALL_EXCEPT);
-    result = std::atan(arg);
-    if (std::isnan(result) || std::isinf(result)) {
-      throw RuntimeError{"Invalid argument to atan", loc};
+    input = std::get_if<double>(&arg);
+    if (input == nullptr) {
+      throw RuntimeError{"wrong data type for atan", loc};
     } else {
-      return result;
+      std::feclearexcept(FE_ALL_EXCEPT);
+      result = std::atan(*input);
+      if (std::isnan(result) || std::isinf(result)) {
+        throw RuntimeError{"Invalid argument to atan", loc};
+      } else {
+        return {result};
+      }
     }
     break;
   case Token::Log:
     arg = getArgument();
-    std::feclearexcept(FE_ALL_EXCEPT);
-    result = std::log(arg);
-    if (std::fetestexcept(FE_INVALID) || std::fetestexcept(FE_DIVBYZERO) || std::isnan(result) ||
-        std::isinf(result)) {
-      throw RuntimeError{"Invalid argument to log", loc};
+    input = std::get_if<double>(&arg);
+    if (input == nullptr) {
+      throw RuntimeError{"wrong data type for log", loc};
     } else {
-      return result;
+      std::feclearexcept(FE_ALL_EXCEPT);
+      result = std::log(*input);
+      if (std::fetestexcept(FE_INVALID) || std::fetestexcept(FE_DIVBYZERO) || std::isnan(result) ||
+          std::isinf(result)) {
+        throw RuntimeError{"Invalid argument to log", loc};
+      } else {
+        return {result};
+      }
     }
     break;
   case Token::Sqrt:
     arg = getArgument();
-    std::feclearexcept(FE_ALL_EXCEPT);
-    result = std::sqrt(arg);
-    if (std::fetestexcept(FE_INVALID) || std::isnan(result) || std::isinf(result)) {
-      throw RuntimeError{"Invalid argument to sqrt", loc};
+    input = std::get_if<double>(&arg);
+    if (input == nullptr) {
+      throw RuntimeError{"wrong data type for sqrt", loc};
     } else {
-      return result;
+      std::feclearexcept(FE_ALL_EXCEPT);
+      result = std::sqrt(*input);
+      if (std::fetestexcept(FE_INVALID) || std::isnan(result) || std::isinf(result)) {
+        throw RuntimeError{"Invalid argument to sqrt", loc};
+      } else {
+        return {result};
+      }
     }
     break;
   case Token::Int:
     // round towards zero
     arg = getArgument();
-    if (arg < 0) {
-      return std::ceil(arg);
+    input = std::get_if<double>(&arg);
+    if (input == nullptr) {
+      throw RuntimeError{"wrong data type for asin", loc};
     } else {
-      return std::floor(arg);
+      if (*input < 0) {
+        return {std::ceil(*input)};
+      } else {
+        return {std::floor(*input)};
+      }
     }
     break;
   default:
@@ -394,14 +567,17 @@ double Parser::primary() {
   }
 }
 
-double Parser::getArgument() {
+Parser::var Parser::getArgument() {
   m_lexer->advance();
-  std::string loc;
   if (m_lexer->getCurrentToken().m_token != Token::Lp) {
     throw SyntaxError{"missing ( after function name", m_lexer->getCurrentToken().getLocation()};
   }
   m_lexer->advance();
-  double arg = addExpr();
+  /*
+  currently this function is only used in arithmetic functions so
+  for now only parse arithmetic expressions
+  */
+  var arg = addExpr();
   if (m_lexer->getCurrentToken().m_token != Token::Rp) {
     throw SyntaxError{"missing ) after function argument",
                       m_lexer->getCurrentToken().getLocation()};

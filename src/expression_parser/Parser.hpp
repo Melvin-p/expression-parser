@@ -4,6 +4,7 @@
 #include <memory>
 #include <sstream>
 #include <unordered_map>
+#include <variant>
 
 class Parser {
 public:
@@ -15,19 +16,20 @@ public:
   friend void operator>>(std::string &s, Parser &parser);
 
 private:
-  std::unordered_map<std::string, double> m_symbol_table{};
+  using var = std::variant<bool, double>;
+  std::unordered_map<std::string, var> m_symbol_table{};
   std::stringstream m_buffer{};
 
   void assignExpr();
-  double booleanUnaryExpr();
-  double booleanExpr();
-  double comparisonExpr();
-  double addExpr();
-  double mulExpr();
-  double powExpr();
-  double unaryExpr();
-  double primary();
-  double getArgument();
+  var booleanUnaryExpr();
+  var booleanExpr();
+  var comparisonExpr();
+  var addExpr();
+  var mulExpr();
+  var powExpr();
+  var unaryExpr();
+  var primary();
+  var getArgument();
 };
 
 #endif
