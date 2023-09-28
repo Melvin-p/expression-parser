@@ -255,6 +255,11 @@ TEST_SUITE("Expression Parser") {
       parser.evalArithmetic(input);
       auto temp = parser.getResult();
       CHECK(temp == "2\n");
+
+      input = "log(125) / log(5);";
+      parser.evalArithmetic(input);
+      temp = parser.getResult();
+      CHECK(temp == "3\n");
     }
     SUBCASE("sqrt") {
       std::string input = "sqrt(4);";
@@ -268,47 +273,87 @@ TEST_SUITE("Expression Parser") {
       std::string input = "true and true;";
       parser.evalArithmetic(input);
       auto temp = parser.getResult();
-      CHECK(temp == "1\n");
+      CHECK(temp == "true\n");
       input = "true and false;";
       parser.evalArithmetic(input);
       temp = parser.getResult();
-      CHECK(temp == "0\n");
+      CHECK(temp == "false\n");
       input = "false and false;";
       parser.evalArithmetic(input);
       temp = parser.getResult();
-      CHECK(temp == "0\n");
+      CHECK(temp == "false\n");
       input = "false and true;";
       parser.evalArithmetic(input);
       temp = parser.getResult();
-      CHECK(temp == "0\n");
+      CHECK(temp == "false\n");
     }
     SUBCASE("OR") {
       std::string input = "true or true;";
       parser.evalArithmetic(input);
       auto temp = parser.getResult();
-      CHECK(temp == "1\n");
+      CHECK(temp == "true\n");
       input = "true or false;";
       parser.evalArithmetic(input);
       temp = parser.getResult();
-      CHECK(temp == "1\n");
+      CHECK(temp == "true\n");
       input = "false or false;";
       parser.evalArithmetic(input);
       temp = parser.getResult();
-      CHECK(temp == "0\n");
+      CHECK(temp == "false\n");
       input = "false or true;";
       parser.evalArithmetic(input);
       temp = parser.getResult();
-      CHECK(temp == "1\n");
+      CHECK(temp == "true\n");
     }
     SUBCASE("not") {
       std::string input = "not true;";
       parser.evalArithmetic(input);
       auto temp = parser.getResult();
-      CHECK(temp == "0\n");
+      CHECK(temp == "false\n");
       input = "not false;";
       parser.evalArithmetic(input);
       temp = parser.getResult();
-      CHECK(temp == "1\n");
+      CHECK(temp == "true\n");
+    }
+    SUBCASE("comparision") {
+      SUBCASE("greater_than") {
+        std::string input = "3 greater_than 2;";
+        parser.evalArithmetic(input);
+        auto temp = parser.getResult();
+        CHECK(temp == "true\n");
+      }
+      SUBCASE("less_than") {
+        std::string input = "5 less_than 4.9;";
+        parser.evalArithmetic(input);
+        auto temp = parser.getResult();
+        CHECK(temp == "false\n");
+      }
+      SUBCASE("equal_to") {
+        std::string input = "3.5 equal_to 3.5;";
+        parser.evalArithmetic(input);
+        auto temp = parser.getResult();
+        CHECK(temp == "true\n");
+      }
+      SUBCASE("not_equal_to") {
+        std::string input = "2.1 not_equal_to 3.5;";
+        parser.evalArithmetic(input);
+        auto temp = parser.getResult();
+        CHECK(temp == "true\n");
+      }
+    }
+    SUBCASE("Boolean and arithmetic") {
+      std::string input = "3 + 2 - (8 * 4) greater_than 100 or true;";
+      parser.evalArithmetic(input);
+      auto temp = parser.getResult();
+      CHECK(temp == "true\n");
+      input = "var a = 10;(a greater_than 100 or a less_than -100) and (a%2 equal_to 0);";
+      parser.evalArithmetic(input);
+      temp = parser.getResult();
+      CHECK(temp == "false\n");
+      input = "var a = 110;(a greater_than 100 or a less_than -100) and (a%2 equal_to 0);";
+      parser.evalArithmetic(input);
+      temp = parser.getResult();
+      CHECK(temp == "true\n");
     }
   }
 }

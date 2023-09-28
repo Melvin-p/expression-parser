@@ -91,8 +91,6 @@ const TokenData Lexer::getToken() {
       out = Token::Not;
     } else if (m_buffer == "var") {
       out = Token::Var;
-    } else if (m_buffer == "Print") {
-      out = Token::Print;
     } else {
       // must be an identifier
       out = Token::Id;

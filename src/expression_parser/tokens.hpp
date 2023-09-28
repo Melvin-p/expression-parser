@@ -26,7 +26,6 @@ enum class Token {
   Or,
   Not,
   Var,
-  Print,
   Semicolon = ';',
   Assign = '=',
   Plus = '+',

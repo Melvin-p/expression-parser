@@ -60,11 +60,6 @@ void Parser::evalArithmetic(std::string &s) {
       assignExpr();
       break;
     }
-    case Token::Print: {
-      out = getArgument();
-      output = true;
-      break;
-    }
     default: {
       out = booleanExpr();
       output = true;
@@ -79,7 +74,7 @@ void Parser::evalArithmetic(std::string &s) {
       auto first = std::get_if<bool>(&out);
       auto second = std::get_if<double>(&out);
       if (first != nullptr) {
-        m_buffer << std::setprecision(4) << *first;
+        m_buffer << std::boolalpha << *first;
       } else if (second != nullptr) {
         m_buffer << std::setprecision(4) << *second;
       } else {

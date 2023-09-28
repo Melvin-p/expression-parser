@@ -6,6 +6,7 @@ add_library(
 target_compile_options("common_compiler_options" INTERFACE 
     $<$<CXX_COMPILER_ID:GNU>:$<$<CONFIG:DEBUG>:-fsanitize=address -fsanitize=undefined -pedantic -Wall -Wextra>>
     $<$<CXX_COMPILER_ID:Clang>:$<$<CONFIG:DEBUG>:-fsanitize=address -fsanitize=undefined -pedantic -Wall -Wextra>>
+    $<$<CXX_COMPILER_ID:MSVC>:$<$<CONFIG:DEBUG>:/W4>>
 )
 
 target_link_options("common_compiler_options" INTERFACE 
