@@ -13,7 +13,7 @@ target_link_options("common_compiler_options" INTERFACE
     $<$<CXX_COMPILER_ID:GNU>:$<$<CONFIG:DEBUG>:-fsanitize=address -fsanitize=undefined>>
     $<$<CXX_COMPILER_ID:Clang>:$<$<CONFIG:DEBUG>:-fsanitize=address -fsanitize=undefined>>
 )
-
+add_subdirectory(./common/)
 add_subdirectory(./expression_parser/)
 
 add_executable("main" main.cpp)

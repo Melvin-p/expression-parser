@@ -1,6 +1,7 @@
 #ifndef PARSER_HPP
 #define PARSER_HPP
 
+#include "Lexer.hpp"
 #include <memory>
 #include <sstream>
 #include <unordered_map>
@@ -16,6 +17,7 @@ public:
   friend void operator>>(std::string &s, Parser &parser);
 
 private:
+  std::unique_ptr<Lexer> m_lexer;
   using var = std::variant<bool, double>;
   std::unordered_map<std::string, var> m_symbol_table{};
   std::stringstream m_buffer{};

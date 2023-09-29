@@ -21,7 +21,7 @@ inline double to_number(std::string &s) {
   iss >> x;
   return x;
 }
-std::unique_ptr<Lexer> m_lexer;
+
 } // namespace
 
 Parser::Parser() {
