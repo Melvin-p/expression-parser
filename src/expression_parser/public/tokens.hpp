@@ -49,7 +49,7 @@ private:
   std::string m_text;
 
 public:
-  TokenData(Token token, std::size_t postion, std::size_t line, std::string text)
+  TokenData(Token token, std::size_t postion = 0, std::size_t line = 0, std::string text = "")
       : m_token(token), m_postion(postion), m_line(line), m_text(text) {}
 
   TokenData(const TokenData &token_data) = default;
