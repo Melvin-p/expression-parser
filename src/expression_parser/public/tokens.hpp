@@ -4,6 +4,10 @@
 #include <cstddef>
 #include <string>
 
+/**
+ * @brief
+ * Holds tokens for tokenizer and AST
+ */
 enum class Token {
   Id,
   Number,
@@ -39,6 +43,10 @@ enum class Token {
   EOF_sym = -1
 };
 
+/**
+ * @brief
+ * holds token and other information associated with the token
+ */
 class TokenData {
 public:
   Token m_token;
@@ -47,24 +55,28 @@ private:
   std::size_t m_postion;
   std::size_t m_line;
   std::string m_text;
+  std::string m_operation;
 
 public:
-  TokenData(Token token, std::size_t postion = 0, std::size_t line = 0, std::string text = "")
-      : m_token(token), m_postion(postion), m_line(line), m_text(text) {}
-
+  TokenData(Token token, std::size_t postion = 0, std::size_t line = 0, std::string text = "");
   TokenData(const TokenData &token_data) = default;
   TokenData(TokenData &&token_data) = default;
+
   TokenData &operator=(const TokenData &token_data) = default;
 
-  const std::string getLocation() const {
-    std::string out{"Line: "};
-    out.append(std::to_string(m_line));
-    out.append(" Postion: ");
-    out.append(std::to_string(m_postion));
-    return out;
-  }
+  Token getToken() const;
+  const std::string getLocation() const;
+  const std::string getText() const;
+  const std::string getOperation() const;
 
-  const std::string getText() { return m_text; }
+private:
+  /**
+   * @brief returns action performed by token
+   * for example `Token::Plus` becomes addition
+   *
+   * @return const std::string
+   */
+  const std::string tokenToAction() const;
 };
 
 #endif

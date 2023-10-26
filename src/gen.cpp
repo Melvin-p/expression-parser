@@ -1,5 +1,5 @@
 #include "ExpGen.hpp"
-#include "Parser.hpp"
+#include "Node.hpp"
 #include <cstddef>
 #include <exception>
 #include <iostream>
@@ -22,18 +22,19 @@ std::ostream null_stream(&null_buffer);
 } // namespace
 
 void gen_and_parse() {
-  for (std::size_t i = 0; i < 100; ++i) {
+  for (std::size_t i = 0; i < 100000; ++i) {
     ExpGen exp_gen{};
     auto val{exp_gen.getStatements()};
     std::string input{val->toString(false)};
-    Parser parser{};
+    Node::SymbolTable s{};
     try {
-      input >> parser;
+      auto output = val->eval(s);
       OUT << "INPUT\n";
       OUT << input << "\n";
       OUT << "OUTPUT\n";
-      OUT << parser;
+      OUT << output << "\n";
     } catch (const std::exception &e) {
+      std::cerr << e.what() << "\n";
       continue;
     }
   }
@@ -49,6 +50,6 @@ void gen() {
 }
 
 int main() {
-  gen();
+  gen_and_parse();
   return 0;
 }

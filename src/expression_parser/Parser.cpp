@@ -199,7 +199,7 @@ Parser::var Parser::comparisonExpr() {
     auto first = std::get_if<double>(&result);
     auto second = std::get_if<double>(&temp);
     if (first == nullptr || second == nullptr) {
-      throw RuntimeError{"bad `equals` wrong data types", loc};
+      throw RuntimeError{"bad `not equals` wrong data types", loc};
     } else {
       return {*first != *second};
     }
@@ -210,7 +210,7 @@ Parser::var Parser::comparisonExpr() {
     auto first = std::get_if<double>(&result);
     auto second = std::get_if<double>(&temp);
     if (first == nullptr || second == nullptr) {
-      throw RuntimeError{"bad `equals` wrong data types", loc};
+      throw RuntimeError{"bad `greater than` wrong data types", loc};
     } else {
       return {*first > *second};
     }
@@ -221,7 +221,7 @@ Parser::var Parser::comparisonExpr() {
     auto first = std::get_if<double>(&result);
     auto second = std::get_if<double>(&temp);
     if (first == nullptr || second == nullptr) {
-      throw RuntimeError{"bad `equals` wrong data types", loc};
+      throw RuntimeError{"bad `bad les than` wrong data types", loc};
     } else {
       return {*first < *second};
     }

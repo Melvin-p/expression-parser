@@ -1,24 +1,116 @@
 #include "AST.hpp"
 #include "Errors.hpp"
 #include "Node.hpp"
+#include "common.hpp"
 #include "tokens.hpp"
 #include <cassert>
+#include <cfenv>
+#include <cmath>
+#include <iomanip>
+#include <sstream>
 #include <string>
+#include <utility>
 
-std::string ParenthesesArithmetic::toString(bool braces) {
+#if !(math_errhandling & MATH_ERREXCEPT)
+#error "no floating point exceptions"
+#endif
+
+Variable::Variable(TokenData &&token) : m_token(std::move(token)) {
+  if (m_token.getToken() != Token::Id) {
+    throw SyntaxError{"Not an identifier", m_token.getLocation()};
+  }
+}
+
+std::string Variable::toString([[maybe_unused]] const bool braces) const {
+  return {" " + m_token.getText() + " "};
+}
+
+double Variable::evalGetDouble(const SymbolTable &symbol_table) const {
+  // check if variable exists and that the type is a double
+  if (auto pos{symbol_table.find(m_token.getText())}; pos != symbol_table.end()) {
+    if (auto val = std::get_if<double>(&(pos->second))) {
+      return *val;
+    } else {
+      throw RuntimeError{"variable with wrong data type used", m_token.getLocation()};
+    }
+  } else {
+    throw RuntimeError{"variable does not exist yet", m_token.getLocation()};
+  }
+}
+
+bool Variable::evalGetBool(const SymbolTable &symbol_table) const {
+  // check if variable exists and that the type is a bool
+  if (auto pos{symbol_table.find(m_token.getText())}; pos != symbol_table.end()) {
+    if (auto val = std::get_if<bool>(&(pos->second))) {
+      return *val;
+    } else {
+      throw RuntimeError{"variable with wrong data type used", m_token.getLocation()};
+    }
+  } else {
+    throw RuntimeError{"variable does not exist yet", m_token.getLocation()};
+  }
+}
+
+AtomicArithmetic::AtomicArithmetic(TokenData &&token) : m_token(std::move(token)) {}
+
+std::string AtomicArithmetic::toString([[maybe_unused]] const bool braces) const {
+  return m_token.getText();
+}
+
+double AtomicArithmetic::evalGetDouble([[maybe_unused]] const SymbolTable &symbol_table) const {
+  std::istringstream iss{m_token.getText()};
+  double x{};
+  iss >> x;
+  if (iss.fail()) {
+    throw RuntimeError{"Cannot parse literal", m_token.getLocation()};
+  }
+  return x;
+}
+
+ParenthesesArithmetic::ParenthesesArithmetic(std::unique_ptr<Expression> &&input, TokenData &&token)
+    : m_token(std::move(token)), m_input(dynamic_unique_ptr_cast<Arithmetic>(std::move(input))) {
+  if (!m_input) {
+    throw SyntaxError{"bad data type in parentheses expected arithmetic got boolean",
+                      m_token.getLocation()};
+  }
+}
+
+std::string ParenthesesArithmetic::toString(const bool braces) const {
   return {"(" + m_input->toString(braces) + ")"};
 }
 
-std::string ParenthesesBoolean::toString(bool braces) {
-  return {"(" + m_input->toString(braces) + ")"};
+double ParenthesesArithmetic::evalGetDouble(const SymbolTable &symbol_table) const {
+  return m_input->evalGetDouble(symbol_table);
 }
 
-std::string AtomicArithmetic::toString([[maybe_unused]] bool braces) {
-  return std::to_string(m_value);
+BinaryArithmeticOperation::BinaryArithmeticOperation(std::unique_ptr<Expression> &&left,
+                                                     TokenData &&token,
+                                                     std::unique_ptr<Expression> &&right)
+    : m_left(dynamic_unique_ptr_cast<Arithmetic>(std::move(left))), m_token(token),
+      m_right(dynamic_unique_ptr_cast<Arithmetic>(std::move(right))) {
+  // check token type
+  switch (m_token.getToken()) {
+  case Token::Plus:
+  case Token::Minus:
+  case Token::Mul:
+  case Token::Div:
+  case Token::Mod:
+  case Token::Pow: {
+    break;
+  }
+  default: {
+    throw SyntaxError{"binary arithmetic operator not know", m_token.getLocation()};
+  }
+  }
+  if (!m_left || !m_right) {
+    throw SyntaxError{"Bad data type for binary arithmetic operation " + m_token.getOperation() +
+                          " ",
+                      m_token.getLocation()};
+  }
 }
 
-std::string BinaryArithmeticOperation::toString(bool braces) {
-  std::string output{m_left->toString(braces) + static_cast<char>(m_token.m_token) +
+std::string BinaryArithmeticOperation::toString(const bool braces) const {
+  std::string output{m_left->toString(braces) + static_cast<char>(m_token.getToken()) +
                      m_right->toString(braces)};
   if (braces) {
     return {"(" + output + ")"};
@@ -27,9 +119,80 @@ std::string BinaryArithmeticOperation::toString(bool braces) {
   }
 }
 
-std::string UnaryArithmeticOperation::toString(bool braces) {
+double BinaryArithmeticOperation::evalGetDouble(const SymbolTable &symbol_table) const {
+  double left{m_left->evalGetDouble(symbol_table)};
+  double right{m_right->evalGetDouble(symbol_table)};
+  double result{};
+  auto loc{m_token.getLocation()};
+
+  std::feclearexcept(FE_ALL_EXCEPT);
+  switch (m_token.getToken()) {
+  case Token::Plus: {
+    result = left + right;
+    break;
+  }
+  case Token::Minus: {
+    result = left - right;
+    break;
+  }
+  case Token::Mul: {
+    result = left * right;
+    break;
+  }
+  case Token::Div: {
+    result = left / right;
+    if (std::fetestexcept(FE_INVALID) || std::fetestexcept(FE_DIVBYZERO) || std::isnan(result) ||
+        std::isinf(result)) {
+      throw RuntimeError{"Bad divide operation", loc};
+    }
+    break;
+  }
+  case Token::Mod: {
+    result = std::fmod(left, right);
+    if (std::fetestexcept(FE_INVALID) || std::fetestexcept(FE_DIVBYZERO) || std::isnan(result) ||
+        std::isinf(result)) {
+      throw RuntimeError{"Bad modulo operation", loc};
+    }
+    break;
+  }
+  case Token::Pow: {
+    result = std::pow(left, right);
+    if (std::fetestexcept(FE_INVALID) || std::fetestexcept(FE_DIVBYZERO) || std::isnan(result) ||
+        std::isinf(result)) {
+      throw RuntimeError{"Bad power operation", loc};
+    }
+    break;
+  }
+  default: {
+    // this should be unreachable
+    assert(false);
+    result = 0;
+  }
+  }
+  return result;
+}
+
+UnaryArithmeticOperation::UnaryArithmeticOperation(std::unique_ptr<Expression> &&input,
+                                                   TokenData &&token)
+    : m_input(dynamic_unique_ptr_cast<Arithmetic>(std::move(input))), m_token(token) {
+  // check token type
+  switch (m_token.getToken()) {
+  case Token::Plus:
+  case Token::Minus: {
+    break;
+  }
+  default: {
+    throw SyntaxError{"unary arithmetic operator not know", m_token.getLocation()};
+  }
+  }
+  if (!m_input) {
+    throw SyntaxError{"Bad data type for unary arithmetic operator", m_token.getLocation()};
+  }
+}
+
+std::string UnaryArithmeticOperation::toString(const bool braces) const {
   std::string out{" "};
-  out += static_cast<char>(m_token.m_token);
+  out += static_cast<char>(m_token.getToken());
   out += m_input->toString(braces);
   if (braces) {
     return {"(" + out + ")"};
@@ -38,8 +201,45 @@ std::string UnaryArithmeticOperation::toString(bool braces) {
   }
 }
 
-std::string FunctionArithmetic::toString(bool braces) {
-  switch (m_token.m_token) {
+double UnaryArithmeticOperation::evalGetDouble(const SymbolTable &symbol_table) const {
+  double input{m_input->evalGetDouble(symbol_table)};
+  switch (m_token.getToken()) {
+  case Token::Plus:
+    return +input;
+  case Token::Minus:
+    return -input;
+  default:
+    // this should be unreachable
+    assert(false);
+    return 0;
+  }
+}
+
+FunctionArithmetic::FunctionArithmetic(std::unique_ptr<Expression> &&input, TokenData &&token)
+    : m_input(dynamic_unique_ptr_cast<Arithmetic>(std::move(input))), m_token(token) {
+  switch (m_token.getToken()) {
+  case Token::Sin:
+  case Token::Cos:
+  case Token::Tan:
+  case Token::Atan:
+  case Token::Acos:
+  case Token::Asin:
+  case Token::Log:
+  case Token::Sqrt:
+  case Token::Int: {
+    break;
+  }
+  default: {
+    throw SyntaxError{"function call not found", m_token.getLocation()};
+  }
+  }
+  if (!m_input) {
+    throw SyntaxError{"Bad data type when calling function", m_token.getLocation()};
+  }
+}
+
+std::string FunctionArithmetic::toString(const bool braces) const {
+  switch (m_token.getToken()) {
   case Token::Sin: {
     return {" sin(" + m_input->toString(braces) + ")"};
   }
@@ -74,17 +274,160 @@ std::string FunctionArithmetic::toString(bool braces) {
   }
 }
 
-std::string AtomicBoolean::toString([[maybe_unused]] bool braces) {
-  if (m_value) {
+double FunctionArithmetic::evalGetDouble(const SymbolTable &symbol_table) const {
+  double input{m_input->evalGetDouble(symbol_table)};
+  double result{};
+  auto loc{m_token.getLocation()};
+
+  std::feclearexcept(FE_ALL_EXCEPT);
+
+  switch (m_token.getToken()) {
+  case Token::Sin: {
+    result = std::sin(input);
+    if (std::fetestexcept(FE_INVALID) || std::isnan(result) || std::isinf(result)) {
+      throw RuntimeError{"Invalid argument to sin", loc};
+    }
+    break;
+  }
+  case Token::Cos: {
+    result = std::cos(input);
+    if (std::fetestexcept(FE_INVALID) || std::isnan(result) || std::isinf(result)) {
+      throw RuntimeError{"Invalid argument to cos", loc};
+    }
+    break;
+  }
+  case Token::Tan: {
+    result = std::tan(input);
+    if (std::fetestexcept(FE_INVALID) || std::isnan(result) || std::isinf(result)) {
+      throw RuntimeError{"Invalid argument to tan", loc};
+    }
+    break;
+  }
+  case Token::Atan: {
+    result = std::atan(input);
+    if (std::fetestexcept(FE_INVALID) || std::isnan(result) || std::isinf(result)) {
+      throw RuntimeError{"Invalid argument to atan", loc};
+    }
+    break;
+  }
+  case Token::Acos: {
+    result = std::acos(input);
+    if (std::fetestexcept(FE_INVALID) || std::isnan(result) || std::isinf(result)) {
+      throw RuntimeError{"Invalid argument to acos", loc};
+    }
+    break;
+  }
+  case Token::Asin: {
+    result = std::asin(input);
+    if (std::fetestexcept(FE_INVALID) || std::isnan(result) || std::isinf(result)) {
+      throw RuntimeError{"Invalid argument to asin", loc};
+    }
+    break;
+  }
+  case Token::Log: {
+    result = std::log(input);
+    if (std::fetestexcept(FE_INVALID) || std::fetestexcept(FE_DIVBYZERO) || std::isnan(result) ||
+        std::isinf(result)) {
+      throw RuntimeError{"Invalid argument to log", loc};
+    }
+    break;
+  }
+  case Token::Sqrt: {
+    result = std::sqrt(input);
+    if (std::fetestexcept(FE_INVALID) || std::isnan(result) || std::isinf(result)) {
+      throw RuntimeError{"Invalid argument to sqrt", loc};
+    }
+    break;
+  }
+  case Token::Int: {
+    if (input < 0) {
+      result = std::ceil(input);
+    } else {
+      result = std::floor(input);
+    }
+    break;
+  }
+  default:
+    // this should be unreachable
+    assert(false);
+    result = 0;
+  }
+
+  // TODO check for floating point errors
+  return result;
+}
+
+AtomicBoolean::AtomicBoolean(TokenData &&token) : m_token(token) {
+  switch (m_token.getToken()) {
+  case Token::True:
+  case Token::False:
+    break;
+  default:
+    throw SyntaxError{"Boolean required", m_token.getLocation()};
+  }
+};
+
+std::string AtomicBoolean::toString([[maybe_unused]] const bool braces) const {
+  if (m_token.getToken() == Token::True) {
     return {" true"};
-  } else {
+  } else if (m_token.getToken() == Token::False) {
     return {" false "};
+  } else {
+    assert(false);
+    return {""};
   }
 }
 
-std::string BinaryBooleanOperation::toString(bool braces) {
+bool AtomicBoolean::evalGetBool([[maybe_unused]] const SymbolTable &symbol_table) const {
+  if (m_token.getToken() == Token::True) {
+    return true;
+  } else if (m_token.getToken() == Token::False) {
+    return false;
+  } else {
+    // should be unreachable
+    assert(false);
+    return false;
+  }
+}
+
+ParenthesesBoolean::ParenthesesBoolean(std::unique_ptr<Expression> &&input, TokenData &&token)
+    : m_token(std::move(token)), m_input(dynamic_unique_ptr_cast<Boolean>(std::move(input))) {
+  if (!m_input) {
+    throw SyntaxError{"bad data type in parentheses expected boolean got something else",
+                      m_token.getLocation()};
+  }
+}
+
+std::string ParenthesesBoolean::toString(const bool braces) const {
+  return {"(" + m_input->toString(braces) + ")"};
+}
+
+bool ParenthesesBoolean::evalGetBool(const SymbolTable &symbol_table) const {
+  return m_input->evalGetBool(symbol_table);
+}
+
+BinaryBooleanOperation::BinaryBooleanOperation(std::unique_ptr<Expression> &&left,
+                                               TokenData &&token,
+                                               std::unique_ptr<Expression> &&right)
+    : m_left(dynamic_unique_ptr_cast<Boolean>(std::move(left))), m_token(token),
+      m_right(dynamic_unique_ptr_cast<Boolean>(std::move(right))) {
+  switch (m_token.getToken()) {
+  case Token::And:
+  case Token::Or: {
+    break;
+  }
+  default: {
+    throw SyntaxError{"Boolean operation not know", m_token.getLocation()};
+  }
+  }
+  if (!m_left || !m_right) {
+    throw SyntaxError{"Bad data types for boolean operation", m_token.getLocation()};
+  }
+}
+
+std::string BinaryBooleanOperation::toString(const bool braces) const {
   std::string output;
-  switch (m_token.m_token) {
+  switch (m_token.getToken()) {
 
   case Token::And: {
     output = {m_left->toString(braces) + " and " + m_right->toString(braces)};
@@ -109,7 +452,37 @@ std::string BinaryBooleanOperation::toString(bool braces) {
   }
 }
 
-std::string UnaryBooleanOperation::toString(bool braces) {
+bool BinaryBooleanOperation::evalGetBool(const SymbolTable &symbol_table) const {
+  bool left{m_left->evalGetBool(symbol_table)};
+  bool right{m_right->evalGetBool(symbol_table)};
+  switch (m_token.getToken()) {
+  case Token::And:
+    return left && right;
+  case Token::Or:
+    return left || right;
+  default:
+    // this should be unreachable
+    assert(false);
+    return false;
+  }
+}
+
+UnaryBooleanOperation::UnaryBooleanOperation(std::unique_ptr<Expression> &&input, TokenData &&token)
+    : m_input(dynamic_unique_ptr_cast<Boolean>(std::move(input))), m_token(token) {
+  switch (m_token.getToken()) {
+  case Token::Not: {
+    break;
+  }
+  default: {
+    throw SyntaxError{"Boolean operation not know", m_token.getLocation()};
+  }
+  }
+  if (!m_input) {
+    throw SyntaxError{"Bad data types for boolean operation", m_token.getLocation()};
+  }
+}
+
+std::string UnaryBooleanOperation::toString(const bool braces) const {
   std::string output{m_input->toString(braces)};
   // currently the only unary boolean token
   if (braces) {
@@ -119,9 +492,35 @@ std::string UnaryBooleanOperation::toString(bool braces) {
   }
 }
 
-std::string Comparision::toString(bool braces) {
+bool UnaryBooleanOperation::evalGetBool(const SymbolTable &symbol_table) const {
+  bool input{m_input->evalGetBool(symbol_table)};
+  return !input;
+}
+
+Comparision::Comparision(std::unique_ptr<Expression> &&left, TokenData &&token,
+                         std::unique_ptr<Expression> &&right)
+    : m_left(dynamic_unique_ptr_cast<Arithmetic>(std::move(left))), m_token(token),
+      m_right(dynamic_unique_ptr_cast<Arithmetic>(std::move(right))) {
+  switch (m_token.getToken()) {
+  case Token::Greater_than:
+  case Token::Less_than:
+  case Token::Equal_to:
+  case Token::Not_equal_to: {
+    break;
+  }
+  default: {
+    throw SyntaxError{"comparison operator not know", m_token.getLocation()};
+  }
+  }
+  if (!m_left || !m_right) {
+    throw SyntaxError{"Bad data type for comparison operation " + m_token.getOperation() + " ",
+                      m_token.getLocation()};
+  }
+}
+
+std::string Comparision::toString(const bool braces) const {
   std::string output;
-  switch (m_token.m_token) {
+  switch (m_token.getToken()) {
   case Token::Greater_than: {
     output = {m_left->toString(braces) + " greater_than " + m_right->toString(braces)};
     if (braces) {
@@ -161,10 +560,113 @@ std::string Comparision::toString(bool braces) {
   }
 }
 
-std::string Assignment::toString(bool braces) {
-  return {"var " + m_var + " = " + m_value->toString(braces) + ";\n"};
+bool Comparision::evalGetBool(const SymbolTable &symbol_table) const {
+  double left{m_left->evalGetDouble(symbol_table)};
+  double right{m_right->evalGetDouble(symbol_table)};
+  switch (m_token.getToken()) {
+  case Token::Greater_than:
+    return left > right;
+  case Token::Less_than:
+    return left < right;
+  case Token::Equal_to:
+    return left == right;
+  case Token::Not_equal_to:
+    return left != right;
+  default:
+    // this should be unreachable
+    assert(false);
+    return false;
+  }
 }
 
-std::string Print::toString(bool braces) { return {m_value->toString(braces) + ";\n"}; }
+Assignment::Assignment(std::unique_ptr<Expression> &&value, TokenData &&token)
+    : m_token(token), m_value(std::move(value)) {
+  if (m_token.getToken() != Token::Id) {
+    throw SyntaxError{"no variable to assign to", m_token.getLocation()};
+  }
+}
 
-std::string Variable::toString([[maybe_unused]] bool braces) { return {" " + m_var + " "}; }
+std::string Assignment::toString(const bool braces) const {
+  return {"var " + m_token.getText() + " = " + m_value->toString(braces) + ";\n"};
+}
+
+std::string Assignment::evalGetString(SymbolTable &symbol_table) const {
+  auto variable_name = m_token.getText();
+
+  if (variable_name == "pi" || variable_name == "e" || variable_name == "nan" ||
+      variable_name == "inf") {
+    throw SyntaxError{"Attempted to modify built in constants", m_token.getLocation()};
+  }
+
+  // check if variable exists
+  if (auto pos{symbol_table.find(variable_name)}; pos != symbol_table.end()) {
+
+    // if variable exists and is a double type
+    if (auto val = std::get_if<double>(&(pos->second))) {
+      // if trying to assign arithmetic expression then valid
+      if (dynamic_unique_ptr_cast_check<Arithmetic>(m_value)) {
+        auto temp = dynamic_cast<Arithmetic *>(m_value.get());
+        auto val = temp->evalGetDouble(symbol_table);
+        pos->second = val;
+      }
+      // trying to assign something that is not a double to a variable holding a double
+      else {
+        throw RuntimeError{"attempted to assign wrong data type to variable holding double",
+                           m_token.getLocation()};
+      }
+    }
+    // variable exists and should be a boolean type
+    else {
+      // if trying to assign boolean expression then valid
+      if (dynamic_unique_ptr_cast_check<Boolean>(m_value)) {
+        auto temp = dynamic_cast<Boolean *>(m_value.get());
+        auto val = temp->evalGetBool(symbol_table);
+        pos->second = val;
+      } else {
+        throw RuntimeError{"attempted to assign wrong data type to variable holding bool",
+                           m_token.getLocation()};
+      }
+    }
+
+  } else {
+    if (dynamic_unique_ptr_cast_check<Boolean>(m_value)) {
+      auto temp = dynamic_cast<Boolean *>(m_value.get());
+      auto val = temp->evalGetBool(symbol_table);
+      symbol_table[variable_name] = val;
+
+    } else if (dynamic_unique_ptr_cast_check<Arithmetic>(m_value)) {
+      auto temp = dynamic_cast<Arithmetic *>(m_value.get());
+
+      auto val = temp->evalGetDouble(symbol_table);
+      symbol_table[variable_name] = val;
+    }
+  }
+  return "";
+}
+
+std::string Print::evalGetString(SymbolTable &symbol_table) const {
+  if (dynamic_unique_ptr_cast_check<Boolean>(m_value)) {
+    auto temp = dynamic_cast<Boolean *>(m_value.get());
+    auto val = temp->evalGetBool(symbol_table);
+
+    if (val) {
+      return "true";
+    } else {
+      return "false";
+    }
+  } else if (dynamic_unique_ptr_cast_check<Arithmetic>(m_value)) {
+    auto temp = dynamic_cast<Arithmetic *>(m_value.get());
+    auto val = temp->evalGetDouble(symbol_table);
+    // restore state of m_value so eval can be called again
+
+    std::stringstream buffer;
+    buffer << std::setprecision(4) << val;
+    return buffer.str();
+
+  } else {
+    assert(false);
+    return "";
+  }
+}
+
+std::string Print::toString(const bool braces) const { return {m_value->toString(braces) + ";\n"}; }

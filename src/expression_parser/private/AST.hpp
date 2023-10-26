@@ -5,33 +5,37 @@
 #include "tokens.hpp"
 #include <memory>
 #include <string>
-#include <vector>
 
 class Variable : public Arithmetic, public Boolean {
 private:
-  std::string m_var;
+  TokenData m_token;
 
 public:
-  Variable(std::string var) : m_var(var) {}
-  virtual std::string toString(bool braces) override;
+  Variable(TokenData &&token);
+  virtual std::string toString(const bool braces) const override;
+  virtual double evalGetDouble(const SymbolTable &symbol_table) const override;
+  virtual bool evalGetBool(const SymbolTable &symbol_table) const override;
 };
 
 class AtomicArithmetic : public Arithmetic {
 private:
-  double m_value{};
+  TokenData m_token;
 
 public:
-  AtomicArithmetic(double value) : m_value(value){};
-  virtual std::string toString(bool braces) override;
+  AtomicArithmetic(TokenData &&token);
+  virtual std::string toString(const bool braces) const override;
+  virtual double evalGetDouble(const SymbolTable &symbol_table) const override;
 };
 
 class ParenthesesArithmetic : public Arithmetic {
 private:
+  TokenData m_token;
   std::unique_ptr<Arithmetic> m_input;
 
 public:
-  ParenthesesArithmetic(std::unique_ptr<Arithmetic> &&input) : m_input(std::move(input)) {}
-  virtual std::string toString(bool braces) override;
+  ParenthesesArithmetic(std::unique_ptr<Expression> &&input, TokenData &&token);
+  virtual std::string toString(const bool braces) const override;
+  virtual double evalGetDouble(const SymbolTable &symbol_table) const override;
 };
 
 class BinaryArithmeticOperation : public Arithmetic {
@@ -41,11 +45,11 @@ private:
   std::unique_ptr<Arithmetic> m_right;
 
 public:
-  BinaryArithmeticOperation(std::unique_ptr<Arithmetic> &&left, TokenData token,
-                            std::unique_ptr<Arithmetic> &&right)
-      : m_left(std::move(left)), m_token(token), m_right(std::move(right)) {}
+  BinaryArithmeticOperation(std::unique_ptr<Expression> &&left, TokenData &&token,
+                            std::unique_ptr<Expression> &&right);
 
-  virtual std::string toString(bool braces) override;
+  virtual std::string toString(const bool braces) const override;
+  virtual double evalGetDouble(const SymbolTable &symbol_table) const override;
 };
 
 class UnaryArithmeticOperation : public Arithmetic {
@@ -54,9 +58,9 @@ private:
   TokenData m_token;
 
 public:
-  UnaryArithmeticOperation(std::unique_ptr<Arithmetic> &&input, TokenData token)
-      : m_input(std::move(input)), m_token(token) {}
-  virtual std::string toString(bool braces) override;
+  UnaryArithmeticOperation(std::unique_ptr<Expression> &&input, TokenData &&token);
+  virtual std::string toString(const bool braces) const override;
+  virtual double evalGetDouble(const SymbolTable &symbol_table) const override;
 };
 
 class FunctionArithmetic : public Arithmetic {
@@ -65,27 +69,30 @@ private:
   TokenData m_token;
 
 public:
-  FunctionArithmetic(std::unique_ptr<Arithmetic> &&input, TokenData token)
-      : m_input(std::move(input)), m_token(token) {}
-  virtual std::string toString(bool braces) override;
+  FunctionArithmetic(std::unique_ptr<Expression> &&input, TokenData &&token);
+  virtual std::string toString(const bool braces) const override;
+  virtual double evalGetDouble(const SymbolTable &symbol_table) const override;
 };
 
 class AtomicBoolean : public Boolean {
 private:
-  bool m_value{};
+  TokenData m_token;
 
 public:
-  AtomicBoolean(bool value) : m_value(value){};
-  virtual std::string toString(bool braces) override;
+  AtomicBoolean(TokenData &&token);
+  virtual std::string toString(const bool braces) const override;
+  virtual bool evalGetBool(const SymbolTable &symbol_table) const override;
 };
 
 class ParenthesesBoolean : public Boolean {
 private:
+  TokenData m_token;
   std::unique_ptr<Boolean> m_input;
 
 public:
-  ParenthesesBoolean(std::unique_ptr<Boolean> &&input) : m_input(std::move(input)) {}
-  virtual std::string toString(bool braces) override;
+  ParenthesesBoolean(std::unique_ptr<Expression> &&input, TokenData &&token);
+  virtual std::string toString(const bool braces) const override;
+  virtual bool evalGetBool(const SymbolTable &symbol_table) const override;
 };
 
 class BinaryBooleanOperation : public Boolean {
@@ -95,10 +102,10 @@ private:
   std::unique_ptr<Boolean> m_right;
 
 public:
-  BinaryBooleanOperation(std::unique_ptr<Boolean> &&left, TokenData token,
-                         std::unique_ptr<Boolean> &&right)
-      : m_left(std::move(left)), m_token(token), m_right(std::move(right)){};
-  virtual std::string toString(bool braces) override;
+  BinaryBooleanOperation(std::unique_ptr<Expression> &&left, TokenData &&token,
+                         std::unique_ptr<Expression> &&right);
+  virtual std::string toString(const bool braces) const override;
+  virtual bool evalGetBool(const SymbolTable &symbol_table) const override;
 };
 
 class Comparision : public Boolean {
@@ -108,21 +115,21 @@ private:
   std::unique_ptr<Arithmetic> m_right;
 
 public:
-  Comparision(std::unique_ptr<Arithmetic> &&left, TokenData token,
-              std::unique_ptr<Arithmetic> &&right)
-      : m_left(std::move(left)), m_token(token), m_right(std::move(right)){};
-  virtual std::string toString(bool braces) override;
+  Comparision(std::unique_ptr<Expression> &&left, TokenData &&token,
+              std::unique_ptr<Expression> &&right);
+  virtual std::string toString(const bool braces) const override;
+  virtual bool evalGetBool(const SymbolTable &symbol_table) const override;
 };
 
 class UnaryBooleanOperation : public Boolean {
 private:
   std::unique_ptr<Boolean> m_input;
-  [[maybe_unused]] TokenData m_token;
+  TokenData m_token;
 
 public:
-  UnaryBooleanOperation(std::unique_ptr<Boolean> &&input, TokenData token)
-      : m_input(std::move(input)), m_token(token) {}
-  virtual std::string toString(bool braces) override;
+  UnaryBooleanOperation(std::unique_ptr<Expression> &&input, TokenData &&token);
+  virtual std::string toString(const bool braces) const override;
+  virtual bool evalGetBool(const SymbolTable &symbol_table) const override;
 };
 
 class Print : public Statement {
@@ -131,18 +138,19 @@ private:
 
 public:
   Print(std::unique_ptr<Expression> &&value) : m_value(std::move(value)) {}
-  virtual std::string toString(bool braces) override;
+  virtual std::string toString(const bool braces) const override;
+  virtual std::string evalGetString(SymbolTable &symbol_table) const override;
 };
 
 class Assignment : public Statement {
 private:
-  std::string m_var;
+  TokenData m_token;
   std::unique_ptr<Expression> m_value;
 
 public:
-  Assignment(std::unique_ptr<Expression> &&value, std::string var)
-      : m_var(var), m_value(std::move(value)) {}
-  virtual std::string toString(bool braces) override;
+  Assignment(std::unique_ptr<Expression> &&value, TokenData &&token);
+  virtual std::string toString(const bool braces) const override;
+  virtual std::string evalGetString(SymbolTable &symbol_table) const override;
 };
 
 #endif

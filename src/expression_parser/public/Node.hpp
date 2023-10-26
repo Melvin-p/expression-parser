@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <variant>
 #include <vector>
 
@@ -10,19 +11,26 @@ class Node {
 private:
 public:
   using var = std::variant<bool, double>;
-  virtual std::string toString(bool braces) = 0;
+  using SymbolTable = std::unordered_map<std::string, var>;
+  virtual std::string toString(const bool braces) const = 0;
   virtual ~Node() = default;
 };
 
-class Expression : public Node {
-  // virtual var eval();
+class Expression : public Node {};
+
+class Arithmetic : virtual public Expression {
+public:
+  virtual double evalGetDouble(const SymbolTable &symbol_table) const = 0;
 };
 
-class Arithmetic : virtual public Expression {};
-class Boolean : virtual public Expression {};
+class Boolean : virtual public Expression {
+public:
+  virtual bool evalGetBool(const SymbolTable &symbol_table) const = 0;
+};
 
 class Statement : public Node {
-  // std::string eval();
+public:
+  virtual std::string evalGetString(SymbolTable &symbol_table) const = 0;
 };
 
 class Program : Node {
@@ -31,8 +39,9 @@ private:
 
 public:
   Program() = default;
-  virtual std::string toString(bool braces) override;
+  virtual std::string toString(const bool braces) const override;
   void append(std::unique_ptr<Statement> &&s);
+  std::string eval(SymbolTable &symbol_table);
 };
 
 #endif
