@@ -7,16 +7,26 @@
 #include <variant>
 #include <vector>
 
+using var = std::variant<bool, double>;
+using SymbolTable = std::unordered_map<std::string, var>;
+
 class Node {
 private:
 public:
-  using var = std::variant<bool, double>;
-  using SymbolTable = std::unordered_map<std::string, var>;
   virtual std::string toString(const bool braces) const = 0;
   virtual ~Node() = default;
 };
 
-class Expression : public Node {};
+class Expression : public Node {
+public:
+  /**
+   * @brief calls evalGetDouble or evalGetBool as required
+   *
+   * @param symbol_table
+   * @return var
+   */
+  virtual var eval(const SymbolTable &symbol_table) const = 0;
+};
 
 class Arithmetic : virtual public Expression {
 public:

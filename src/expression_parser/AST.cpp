@@ -51,6 +51,14 @@ bool Variable::evalGetBool(const SymbolTable &symbol_table) const {
   }
 }
 
+var Variable::eval(const SymbolTable &symbol_table) const {
+  if (auto pos{symbol_table.find(m_token.getText())}; pos != symbol_table.end()) {
+    return pos->second;
+  } else {
+    throw RuntimeError{"variable does not exist yet", m_token.getLocation()};
+  }
+};
+
 AtomicArithmetic::AtomicArithmetic(TokenData &&token) : m_token(std::move(token)) {}
 
 std::string AtomicArithmetic::toString([[maybe_unused]] const bool braces) const {
@@ -67,6 +75,10 @@ double AtomicArithmetic::evalGetDouble([[maybe_unused]] const SymbolTable &symbo
   return x;
 }
 
+var AtomicArithmetic::eval(const SymbolTable &symbol_table) const {
+  return evalGetDouble(symbol_table);
+}
+
 ParenthesesArithmetic::ParenthesesArithmetic(std::unique_ptr<Expression> &&input, TokenData &&token)
     : m_token(std::move(token)), m_input(dynamic_unique_ptr_cast<Arithmetic>(std::move(input))) {
   if (!m_input) {
@@ -81,6 +93,10 @@ std::string ParenthesesArithmetic::toString(const bool braces) const {
 
 double ParenthesesArithmetic::evalGetDouble(const SymbolTable &symbol_table) const {
   return m_input->evalGetDouble(symbol_table);
+}
+
+var ParenthesesArithmetic::eval(const SymbolTable &symbol_table) const {
+  return evalGetDouble(symbol_table);
 }
 
 BinaryArithmeticOperation::BinaryArithmeticOperation(std::unique_ptr<Expression> &&left,
@@ -172,6 +188,10 @@ double BinaryArithmeticOperation::evalGetDouble(const SymbolTable &symbol_table)
   return result;
 }
 
+var BinaryArithmeticOperation::eval(const SymbolTable &symbol_table) const {
+  return evalGetDouble(symbol_table);
+}
+
 UnaryArithmeticOperation::UnaryArithmeticOperation(std::unique_ptr<Expression> &&input,
                                                    TokenData &&token)
     : m_input(dynamic_unique_ptr_cast<Arithmetic>(std::move(input))), m_token(token) {
@@ -213,6 +233,10 @@ double UnaryArithmeticOperation::evalGetDouble(const SymbolTable &symbol_table) 
     assert(false);
     return 0;
   }
+}
+
+var UnaryArithmeticOperation::eval(const SymbolTable &symbol_table) const {
+  return evalGetDouble(symbol_table);
 }
 
 FunctionArithmetic::FunctionArithmetic(std::unique_ptr<Expression> &&input, TokenData &&token)
@@ -353,8 +377,11 @@ double FunctionArithmetic::evalGetDouble(const SymbolTable &symbol_table) const 
     result = 0;
   }
 
-  // TODO check for floating point errors
   return result;
+}
+
+var FunctionArithmetic::eval(const SymbolTable &symbol_table) const {
+  return evalGetDouble(symbol_table);
 }
 
 AtomicBoolean::AtomicBoolean(TokenData &&token) : m_token(token) {
@@ -390,6 +417,8 @@ bool AtomicBoolean::evalGetBool([[maybe_unused]] const SymbolTable &symbol_table
   }
 }
 
+var AtomicBoolean::eval(const SymbolTable &symbol_table) const { return evalGetBool(symbol_table); }
+
 ParenthesesBoolean::ParenthesesBoolean(std::unique_ptr<Expression> &&input, TokenData &&token)
     : m_token(std::move(token)), m_input(dynamic_unique_ptr_cast<Boolean>(std::move(input))) {
   if (!m_input) {
@@ -404,6 +433,10 @@ std::string ParenthesesBoolean::toString(const bool braces) const {
 
 bool ParenthesesBoolean::evalGetBool(const SymbolTable &symbol_table) const {
   return m_input->evalGetBool(symbol_table);
+}
+
+var ParenthesesBoolean::eval(const SymbolTable &symbol_table) const {
+  return evalGetBool(symbol_table);
 }
 
 BinaryBooleanOperation::BinaryBooleanOperation(std::unique_ptr<Expression> &&left,
@@ -467,6 +500,10 @@ bool BinaryBooleanOperation::evalGetBool(const SymbolTable &symbol_table) const 
   }
 }
 
+var BinaryBooleanOperation::eval(const SymbolTable &symbol_table) const {
+  return evalGetBool(symbol_table);
+}
+
 UnaryBooleanOperation::UnaryBooleanOperation(std::unique_ptr<Expression> &&input, TokenData &&token)
     : m_input(dynamic_unique_ptr_cast<Boolean>(std::move(input))), m_token(token) {
   switch (m_token.getToken()) {
@@ -495,6 +532,10 @@ std::string UnaryBooleanOperation::toString(const bool braces) const {
 bool UnaryBooleanOperation::evalGetBool(const SymbolTable &symbol_table) const {
   bool input{m_input->evalGetBool(symbol_table)};
   return !input;
+}
+
+var UnaryBooleanOperation::eval(const SymbolTable &symbol_table) const {
+  return evalGetBool(symbol_table);
 }
 
 Comparision::Comparision(std::unique_ptr<Expression> &&left, TokenData &&token,
@@ -579,6 +620,8 @@ bool Comparision::evalGetBool(const SymbolTable &symbol_table) const {
   }
 }
 
+var Comparision::eval(const SymbolTable &symbol_table) const { return evalGetBool(symbol_table); }
+
 Assignment::Assignment(std::unique_ptr<Expression> &&value, TokenData &&token)
     : m_token(token), m_value(std::move(value)) {
   if (m_token.getToken() != Token::Id) {
@@ -598,69 +641,44 @@ std::string Assignment::evalGetString(SymbolTable &symbol_table) const {
     throw SyntaxError{"Attempted to modify built in constants", m_token.getLocation()};
   }
 
-  // check if variable exists
-  if (auto pos{symbol_table.find(variable_name)}; pos != symbol_table.end()) {
+  auto pos{symbol_table.find(variable_name)};
+  bool var_exists = pos != symbol_table.end();
 
-    // if variable exists and is a double type
-    if (auto val = std::get_if<double>(&(pos->second))) {
-      // if trying to assign arithmetic expression then valid
-      if (dynamic_unique_ptr_cast_check<Arithmetic>(m_value)) {
-        auto temp = dynamic_cast<Arithmetic *>(m_value.get());
-        auto val = temp->evalGetDouble(symbol_table);
-        pos->second = val;
-      }
-      // trying to assign something that is not a double to a variable holding a double
-      else {
-        throw RuntimeError{"attempted to assign wrong data type to variable holding double",
-                           m_token.getLocation()};
-      }
+  auto assignment_value = m_value->eval(symbol_table);
+
+  // variable exists
+  if (var_exists) {
+
+    auto variable_value = pos->second;
+
+    if (variable_value.index() == assignment_value.index()) {
+      symbol_table[variable_name] = assignment_value;
+    } else {
+      throw RuntimeError{"attempted to assign wrong data type to variable", m_token.getLocation()};
     }
-    // variable exists and should be a boolean type
-    else {
-      // if trying to assign boolean expression then valid
-      if (dynamic_unique_ptr_cast_check<Boolean>(m_value)) {
-        auto temp = dynamic_cast<Boolean *>(m_value.get());
-        auto val = temp->evalGetBool(symbol_table);
-        pos->second = val;
-      } else {
-        throw RuntimeError{"attempted to assign wrong data type to variable holding bool",
-                           m_token.getLocation()};
-      }
-    }
-
-  } else {
-    if (dynamic_unique_ptr_cast_check<Boolean>(m_value)) {
-      auto temp = dynamic_cast<Boolean *>(m_value.get());
-      auto val = temp->evalGetBool(symbol_table);
-      symbol_table[variable_name] = val;
-
-    } else if (dynamic_unique_ptr_cast_check<Arithmetic>(m_value)) {
-      auto temp = dynamic_cast<Arithmetic *>(m_value.get());
-
-      auto val = temp->evalGetDouble(symbol_table);
-      symbol_table[variable_name] = val;
-    }
+  }
+  // variable does not exist
+  else {
+    symbol_table[variable_name] = assignment_value;
   }
   return "";
 }
 
 std::string Print::evalGetString(SymbolTable &symbol_table) const {
-  if (dynamic_unique_ptr_cast_check<Boolean>(m_value)) {
-    auto temp = dynamic_cast<Boolean *>(m_value.get());
-    auto val = temp->evalGetBool(symbol_table);
 
-    if (val) {
+  var result = m_value->eval(symbol_table);
+
+  if (auto value = std::get_if<bool>(&result)) {
+
+    if (*value) {
       return "true";
     } else {
       return "false";
     }
-  } else if (dynamic_unique_ptr_cast_check<Arithmetic>(m_value)) {
-    auto temp = dynamic_cast<Arithmetic *>(m_value.get());
-    auto val = temp->evalGetDouble(symbol_table);
-    // restore state of m_value so eval can be called again
+  } else if (auto value = std::get_if<double>(&result)) {
 
     std::stringstream buffer;
-    buffer << std::setprecision(4) << val;
+    buffer << std::setprecision(4) << *value;
     return buffer.str();
 
   } else {
