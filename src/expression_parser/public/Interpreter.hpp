@@ -12,7 +12,7 @@ private:
 
 public:
   Interpreter();
-  std::string evaluate(std::string &s);
+  [[nodiscard]] std::string evaluate(std::string &s);
   void reset();
 };
 
