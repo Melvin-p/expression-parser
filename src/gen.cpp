@@ -26,9 +26,9 @@ void gen_and_parse() {
     ExpGen exp_gen{};
     auto val{exp_gen.getStatements()};
     std::string input{val->toString(false)};
-    Node::SymbolTable s{};
+    SymbolTable symbol_table{};
     try {
-      auto output = val->eval(s);
+      auto output = val->eval(symbol_table);
       OUT << "INPUT\n";
       OUT << input << "\n";
       OUT << "OUTPUT\n";

@@ -671,15 +671,16 @@ std::string Print::evalGetString(SymbolTable &symbol_table) const {
   if (auto value = std::get_if<bool>(&result)) {
 
     if (*value) {
-      return "true";
+      return "true\n";
     } else {
-      return "false";
+      return "false\n";
     }
   } else if (auto value = std::get_if<double>(&result)) {
 
     std::stringstream buffer;
     buffer << std::setprecision(4) << *value;
-    return buffer.str();
+    auto val{buffer.str() + '\n'};
+    return val;
 
   } else {
     assert(false);

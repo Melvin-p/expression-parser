@@ -51,7 +51,7 @@ public:
   Program() = default;
   virtual std::string toString(const bool braces) const override;
   void append(std::unique_ptr<Statement> &&s);
-  std::string eval(SymbolTable &symbol_table);
+  std::string eval(SymbolTable &symbol_table) const;
 };
 
 #endif

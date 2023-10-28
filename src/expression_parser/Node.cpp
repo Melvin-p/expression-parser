@@ -10,13 +10,10 @@ std::string Program::toString(const bool braces) const {
   return out;
 }
 
-std::string Program::eval(SymbolTable &symbol_table) {
+std::string Program::eval(SymbolTable &symbol_table) const {
   std::string buffer{};
   for (const auto &i : m_statements) {
     buffer.append(i->evalGetString(symbol_table));
-    if (*(buffer.end() - 1) != '\n') {
-      buffer.append("\n");
-    }
   }
   return buffer;
 }
