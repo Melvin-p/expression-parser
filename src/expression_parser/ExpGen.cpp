@@ -5,7 +5,6 @@
 #include "tokens.hpp"
 #include <cassert>
 #include <cstddef>
-#include <iostream>
 #include <memory>
 
 namespace {
@@ -160,16 +159,16 @@ std::unique_ptr<Program> ExpGen::getStatements(std::size_t count) {
       // double
       if (type) {
         auto exp_temp = genArithmetic();
-        auto val{
-            std::make_unique<Assignment>(std::move(exp_temp), TokenData{Token::Id, 0, 0, var})};
+        auto val{std::make_unique<Assignment>(std::move(exp_temp), TokenData{Token::Id, 0, 0, var},
+                                              true)};
         out->append(std::move(val));
         m_doubles.push_back(var);
         m_symbol_table[var] = true;
         // bool
       } else {
         auto exp_temp = genBoolean();
-        auto val{
-            std::make_unique<Assignment>(std::move(exp_temp), TokenData{Token::Id, 0, 0, var})};
+        auto val{std::make_unique<Assignment>(std::move(exp_temp), TokenData{Token::Id, 0, 0, var},
+                                              true)};
         out->append(std::move(val));
         m_bools.push_back(var);
         m_symbol_table[var] = false;
@@ -183,15 +182,15 @@ std::unique_ptr<Program> ExpGen::getStatements(std::size_t count) {
       // double
       if (type) {
         auto exp_temp = genArithmetic();
-        auto val{
-            std::make_unique<Assignment>(std::move(exp_temp), TokenData{Token::Id, 0, 0, var})};
+        auto val{std::make_unique<Assignment>(std::move(exp_temp), TokenData{Token::Id, 0, 0, var},
+                                              false)};
         out->append(std::move(val));
         m_symbol_table[var] = true;
         // bool
       } else {
         auto exp_temp = genBoolean();
-        auto val{
-            std::make_unique<Assignment>(std::move(exp_temp), TokenData{Token::Id, 0, 0, var})};
+        auto val{std::make_unique<Assignment>(std::move(exp_temp), TokenData{Token::Id, 0, 0, var},
+                                              false)};
         out->append(std::move(val));
         m_symbol_table[var] = false;
       }

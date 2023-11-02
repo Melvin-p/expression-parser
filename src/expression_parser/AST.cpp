@@ -622,15 +622,20 @@ bool Comparision::evalGetBool(const SymbolTable &symbol_table) const {
 
 var Comparision::eval(const SymbolTable &symbol_table) const { return evalGetBool(symbol_table); }
 
-Assignment::Assignment(std::unique_ptr<Expression> &&value, TokenData &&token)
-    : m_token(token), m_value(std::move(value)) {
+Assignment::Assignment(std::unique_ptr<Expression> &&value, TokenData &&token, bool create_var)
+    : m_token(token), m_value(std::move(value)), m_create_var(create_var) {
   if (m_token.getToken() != Token::Id) {
     throw SyntaxError{"no variable to assign to", m_token.getLocation()};
   }
 }
 
 std::string Assignment::toString(const bool braces) const {
+  if(m_create_var){
   return {"var " + m_token.getText() + " = " + m_value->toString(braces) + ";\n"};
+  }
+  else{
+    return {" " + m_token.getText() + " = " + m_value->toString(braces) + ";\n"};
+  }
 }
 
 std::string Assignment::evalGetString(SymbolTable &symbol_table) const {
@@ -646,8 +651,8 @@ std::string Assignment::evalGetString(SymbolTable &symbol_table) const {
 
   auto assignment_value = m_value->eval(symbol_table);
 
-  // variable exists
-  if (var_exists) {
+  // variable exists and not trying to create new variable
+  if (var_exists && !m_create_var) {
 
     auto variable_value = pos->second;
 
@@ -657,9 +662,17 @@ std::string Assignment::evalGetString(SymbolTable &symbol_table) const {
       throw RuntimeError{"attempted to assign wrong data type to variable", m_token.getLocation()};
     }
   }
-  // variable does not exist
-  else {
+  // variable already exists and trying to create new variable
+  else if (var_exists && m_create_var) {
+    throw RuntimeError{"Tried to create already existing variable", m_token.getLocation()};
+  }
+  // variable does not exist and trying to create new variable
+  else if (!var_exists && m_create_var) {
     symbol_table[variable_name] = assignment_value;
+  }
+  // variable does not exist and not trying to create new variable 
+  else {
+    throw RuntimeError{"Unkown variable", m_token.getLocation()};
   }
   return "";
 }

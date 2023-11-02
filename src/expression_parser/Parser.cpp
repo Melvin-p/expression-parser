@@ -44,10 +44,27 @@ std::unique_ptr<Statement> Parser::assignExpr() {
 
     if (token_assign.m_token == Token::Assign) {
       m_lexer->advance();
-      return std::make_unique<Assignment>(booleanExpr(), std::move(token_identifier));
+      return std::make_unique<Assignment>(booleanExpr(), std::move(token_identifier), true);
     } else {
       throw SyntaxError{"Missing = after variable name", token_assign.getLocation()};
     }
+  } else if (t_initial.getToken() == Token::Id) {
+
+    // move to next token which should be an =
+    m_lexer->advance();
+    TokenData token_assignment = m_lexer->getCurrentToken();
+
+    if (token_assignment.getToken() == Token::Assign) {
+      m_lexer->advance();
+      return std::make_unique<Assignment>(booleanExpr(), std::move(t_initial), false);
+    } else {
+      // push tokens back to the lexer
+      m_lexer->pushBackToken(token_assignment);
+      m_lexer->pushBackToken(t_initial);
+      m_lexer->advance();
+      return std::make_unique<Print>(booleanExpr());
+    }
+
   } else {
     return std::make_unique<Print>(booleanExpr());
   }

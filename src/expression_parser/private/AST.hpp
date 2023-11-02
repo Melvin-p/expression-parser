@@ -157,9 +157,10 @@ class Assignment : public Statement {
 private:
   TokenData m_token;
   std::unique_ptr<Expression> m_value;
+  bool m_create_var;
 
 public:
-  Assignment(std::unique_ptr<Expression> &&value, TokenData &&token);
+  Assignment(std::unique_ptr<Expression> &&value, TokenData &&token, bool create_var);
   virtual std::string toString(const bool braces) const override;
   virtual std::string evalGetString(SymbolTable &symbol_table) const override;
 };

@@ -21,8 +21,5 @@ Implemented using a recursive decent parser
 - boolean logical operators `and` `or` `not`
 - comparison operators `equal_to` `not_equal_to` `less_than` `greater_than`
 
-### todo
-- write more tests
-
 ### References:  
 https://unclechromedome.org/c++-tutorials/expression-parser/index.html

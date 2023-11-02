@@ -307,11 +307,11 @@ TEST_SUITE("Expression Parser") {
       auto output = interpreter.evaluate(input);
       CHECK(output == "true\n");
 
-      input = "var a = 10;(a greater_than 100 or a less_than -100) and (a%2 equal_to 0);";
+      input = "var d = 10;(d greater_than 100 or d less_than -100) and (d%2 equal_to 0);";
       output = interpreter.evaluate(input);
       CHECK(output == "false\n");
 
-      input = "var a = 110;(a greater_than 100 or a less_than -100) and (a%2 equal_to 0);";
+      input = "var kldf = 110;(kldf greater_than 100 or kldf less_than -100) and (kldf%2 equal_to 0);";
       output = interpreter.evaluate(input);
       CHECK(output == "true\n");
     }
