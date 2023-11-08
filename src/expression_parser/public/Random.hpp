@@ -1,7 +1,7 @@
 #ifndef RANDOM_UTILITY_HPP
 #define RANDOM_UTILITY_HPP
 
-#include "tokens.hpp"
+#include "ActionTokens.hpp"
 #include <cstddef>
 #include <random>
 #include <string>
@@ -14,11 +14,11 @@ private:
 
 public:
   Random() = default;
-  Token getArithBinaryOp();
-  Token getArithUnaryOp();
-  Token getFunction();
-  Token getBinaryOp();
-  Token getCompOp();
+  ActionTokens getArithBinaryOp();
+  ActionTokens getArithUnaryOp();
+  ActionTokens getFunction();
+  ActionTokens getBinaryOp();
+  ActionTokens getCompOp();
   double getReal0to1();
   double getReal0to9();
   int getInteger1to12();

@@ -1,41 +1,44 @@
 #include "Random.hpp"
-#include "tokens.hpp"
 #include <algorithm>
 #include <array>
 #include <cstddef>
 
-Token Random::getArithBinaryOp() {
-  const constexpr std::array<const Token, 6> operators{Token::Plus, Token::Minus, Token::Mul,
-                                                       Token::Mod,  Token::Div,   Token::Pow};
+ActionTokens Random::getArithBinaryOp() {
+  const constexpr std::array<const ActionTokens, 6> operators{
+      ActionTokens::Addition, ActionTokens::Subtraction, ActionTokens::Multiplication,
+      ActionTokens::Modulo,   ActionTokens::Division,    ActionTokens::Power};
 
   std::uniform_int_distribution<std::size_t> operator_choice{0, operators.size() - 1};
   return operators[operator_choice(m_mt)];
 }
 
-Token Random::getArithUnaryOp() {
-  const constexpr std::array<const Token, 2> operators{Token::Plus, Token::Minus};
+ActionTokens Random::getArithUnaryOp() {
+  const constexpr std::array<const ActionTokens, 2> operators{ActionTokens::positive,
+                                                              ActionTokens::negative};
   std::uniform_int_distribution<std::size_t> operator_choice{0, operators.size() - 1};
   return operators[operator_choice(m_mt)];
 }
 
-Token Random::getFunction() {
-  const constexpr std::array<const Token, 9> functions{Token::Sin,  Token::Cos,  Token::Tan,
-                                                       Token::Asin, Token::Atan, Token::Acos,
-                                                       Token::Log,  Token::Sqrt, Token::Int};
+ActionTokens Random::getFunction() {
+  const constexpr std::array<const ActionTokens, 9> functions{
+      ActionTokens::sin,  ActionTokens::cos,  ActionTokens::tan,
+      ActionTokens::Asin, ActionTokens::Atan, ActionTokens::Acos,
+      ActionTokens::Log,  ActionTokens::Sqrt, ActionTokens::Int};
 
   std::uniform_int_distribution<std::size_t> operator_choice{0, functions.size() - 1};
   return functions[operator_choice(m_mt)];
 }
 
-Token Random::getBinaryOp() {
-  const constexpr std::array<const Token, 2> operators{Token::And, Token::Or};
+ActionTokens Random::getBinaryOp() {
+  const constexpr std::array<const ActionTokens, 2> operators{ActionTokens::And, ActionTokens::Or};
   std::uniform_int_distribution<std::size_t> operator_choice{0, operators.size() - 1};
   return operators[operator_choice(m_mt)];
 }
 
-Token Random::getCompOp() {
-  const constexpr std::array<const Token, 4> operators{Token::Greater_than, Token::Less_than,
-                                                       Token::Equal_to, Token::Not_equal_to};
+ActionTokens Random::getCompOp() {
+  const constexpr std::array<const ActionTokens, 4> operators{
+      ActionTokens::Greater_than, ActionTokens::Less_than, ActionTokens::Equal_to,
+      ActionTokens::Not_equal_to};
   std::uniform_int_distribution<std::size_t> operator_choice{0, operators.size() - 1};
   return operators[operator_choice(m_mt)];
 }

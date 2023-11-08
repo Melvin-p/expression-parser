@@ -1,10 +1,12 @@
 #ifndef AST_HPP
 #define AST_HPP
 
+#include "ActionTokens.hpp"
 #include "Node.hpp"
 #include "tokens.hpp"
 #include <memory>
 #include <string>
+
 
 class Variable : public Arithmetic, public Boolean {
 private:
@@ -44,11 +46,11 @@ public:
 class BinaryArithmeticOperation : public Arithmetic {
 private:
   std::unique_ptr<Arithmetic> m_left;
-  TokenData m_token;
+  ActionTokenData m_token;
   std::unique_ptr<Arithmetic> m_right;
 
 public:
-  BinaryArithmeticOperation(std::unique_ptr<Expression> &&left, TokenData &&token,
+  BinaryArithmeticOperation(std::unique_ptr<Expression> &&left, ActionTokenData &&token,
                             std::unique_ptr<Expression> &&right);
 
   virtual std::string toString(const bool braces) const override;
@@ -59,10 +61,10 @@ public:
 class UnaryArithmeticOperation : public Arithmetic {
 private:
   std::unique_ptr<Arithmetic> m_input;
-  TokenData m_token;
+  ActionTokenData m_token;
 
 public:
-  UnaryArithmeticOperation(std::unique_ptr<Expression> &&input, TokenData &&token);
+  UnaryArithmeticOperation(std::unique_ptr<Expression> &&input, ActionTokenData &&token);
   virtual std::string toString(const bool braces) const override;
   virtual double evalGetDouble(const SymbolTable &symbol_table) const override;
   virtual var eval(const SymbolTable &symbol_table) const override;
@@ -71,10 +73,10 @@ public:
 class FunctionArithmetic : public Arithmetic {
 private:
   std::unique_ptr<Arithmetic> m_input;
-  TokenData m_token;
+  ActionTokenData m_token;
 
 public:
-  FunctionArithmetic(std::unique_ptr<Expression> &&input, TokenData &&token);
+  FunctionArithmetic(std::unique_ptr<Expression> &&input, ActionTokenData &&token);
   virtual std::string toString(const bool braces) const override;
   virtual double evalGetDouble(const SymbolTable &symbol_table) const override;
   virtual var eval(const SymbolTable &symbol_table) const override;
@@ -106,11 +108,11 @@ public:
 class BinaryBooleanOperation : public Boolean {
 private:
   std::unique_ptr<Boolean> m_left;
-  TokenData m_token;
+  ActionTokenData m_token;
   std::unique_ptr<Boolean> m_right;
 
 public:
-  BinaryBooleanOperation(std::unique_ptr<Expression> &&left, TokenData &&token,
+  BinaryBooleanOperation(std::unique_ptr<Expression> &&left, ActionTokenData &&token,
                          std::unique_ptr<Expression> &&right);
   virtual std::string toString(const bool braces) const override;
   virtual bool evalGetBool(const SymbolTable &symbol_table) const override;
@@ -120,11 +122,11 @@ public:
 class Comparision : public Boolean {
 private:
   std::unique_ptr<Arithmetic> m_left;
-  TokenData m_token;
+  ActionTokenData m_token;
   std::unique_ptr<Arithmetic> m_right;
 
 public:
-  Comparision(std::unique_ptr<Expression> &&left, TokenData &&token,
+  Comparision(std::unique_ptr<Expression> &&left, ActionTokenData &&token,
               std::unique_ptr<Expression> &&right);
   virtual std::string toString(const bool braces) const override;
   virtual bool evalGetBool(const SymbolTable &symbol_table) const override;
@@ -134,10 +136,10 @@ public:
 class UnaryBooleanOperation : public Boolean {
 private:
   std::unique_ptr<Boolean> m_input;
-  TokenData m_token;
+  ActionTokenData m_token;
 
 public:
-  UnaryBooleanOperation(std::unique_ptr<Expression> &&input, TokenData &&token);
+  UnaryBooleanOperation(std::unique_ptr<Expression> &&input, ActionTokenData &&token);
   virtual std::string toString(const bool braces) const override;
   virtual bool evalGetBool(const SymbolTable &symbol_table) const override;
   virtual var eval(const SymbolTable &symbol_table) const override;

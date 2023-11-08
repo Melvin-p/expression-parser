@@ -1,11 +1,13 @@
 #include "Parser.hpp"
 #include "AST.hpp"
+#include "ActionTokens.hpp"
 #include "Errors.hpp"
 #include "Lexer.hpp"
 #include "Node.hpp"
 #include "tokens.hpp"
 #include <memory>
 #include <string>
+
 
 std::unique_ptr<Program> Parser::genAST(std::string &s) {
   m_lexer = std::make_unique<Lexer>(std::istringstream{s});
@@ -80,7 +82,7 @@ std::unique_ptr<Expression> Parser::booleanExpr() {
       m_lexer->advance();
       auto right = booleanUnaryExpr();
       std::unique_ptr<Expression> temp{std::make_unique<BinaryBooleanOperation>(
-          std::move(left), std::move(token), std::move(right))};
+          std::move(left), ActionTokenData{token, ActionTokens::And}, std::move(right))};
       left.swap(temp);
       break;
     }
@@ -88,7 +90,7 @@ std::unique_ptr<Expression> Parser::booleanExpr() {
       m_lexer->advance();
       auto right = booleanUnaryExpr();
       std::unique_ptr<Expression> temp{std::make_unique<BinaryBooleanOperation>(
-          std::move(left), std::move(token), std::move(right))};
+          std::move(left), ActionTokenData{token, ActionTokens::Or}, std::move(right))};
       left.swap(temp);
       break;
     }
@@ -106,7 +108,8 @@ std::unique_ptr<Expression> Parser::booleanUnaryExpr() {
   case Token::Not: {
     m_lexer->advance();
     auto result = comparisonExpr();
-    return std::make_unique<UnaryBooleanOperation>(std::move(result), std::move(token));
+    return std::make_unique<UnaryBooleanOperation>(std::move(result),
+                                                   ActionTokenData{token, ActionTokens::Not});
   }
   default: {
     return comparisonExpr();
@@ -122,22 +125,26 @@ std::unique_ptr<Expression> Parser::comparisonExpr() {
   case Token::Equal_to: {
     m_lexer->advance();
     auto right = addExpr();
-    return std::make_unique<Comparision>(std::move(left), std::move(token), std::move(right));
+    return std::make_unique<Comparision>(
+        std::move(left), ActionTokenData{token, ActionTokens::Equal_to}, std::move(right));
   }
   case Token::Not_equal_to: {
     m_lexer->advance();
     auto right = addExpr();
-    return std::make_unique<Comparision>(std::move(left), std::move(token), std::move(right));
+    return std::make_unique<Comparision>(
+        std::move(left), ActionTokenData{token, ActionTokens::Not_equal_to}, std::move(right));
   }
   case Token::Greater_than: {
     m_lexer->advance();
     auto right = addExpr();
-    return std::make_unique<Comparision>(std::move(left), std::move(token), std::move(right));
+    return std::make_unique<Comparision>(
+        std::move(left), ActionTokenData{token, ActionTokens::Greater_than}, std::move(right));
   }
   case Token::Less_than: {
     m_lexer->advance();
     auto right = addExpr();
-    return std::make_unique<Comparision>(std::move(left), std::move(token), std::move(right));
+    return std::make_unique<Comparision>(
+        std::move(left), ActionTokenData{token, ActionTokens::Less_than}, std::move(right));
   }
   default: {
     return left;
@@ -155,7 +162,7 @@ std::unique_ptr<Expression> Parser::addExpr() {
       m_lexer->advance();
       auto right = mulExpr();
       std::unique_ptr<Expression> temp{std::make_unique<BinaryArithmeticOperation>(
-          std::move(left), std::move(token), std::move(right))};
+          std::move(left), ActionTokenData{token, ActionTokens::Addition}, std::move(right))};
       left.swap(temp);
       break;
     }
@@ -163,7 +170,7 @@ std::unique_ptr<Expression> Parser::addExpr() {
       m_lexer->advance();
       auto right = mulExpr();
       std::unique_ptr<Expression> temp{std::make_unique<BinaryArithmeticOperation>(
-          std::move(left), std::move(token), std::move(right))};
+          std::move(left), ActionTokenData{token, ActionTokens::Subtraction}, std::move(right))};
       left.swap(temp);
       break;
     }
@@ -184,7 +191,7 @@ std::unique_ptr<Expression> Parser::mulExpr() {
       m_lexer->advance();
       auto right = powExpr();
       std::unique_ptr<Expression> temp{std::make_unique<BinaryArithmeticOperation>(
-          std::move(left), std::move(token), std::move(right))};
+          std::move(left), ActionTokenData{token, ActionTokens::Multiplication}, std::move(right))};
       left.swap(temp);
       break;
     }
@@ -192,7 +199,7 @@ std::unique_ptr<Expression> Parser::mulExpr() {
       m_lexer->advance();
       auto right = powExpr();
       std::unique_ptr<Expression> temp{std::make_unique<BinaryArithmeticOperation>(
-          std::move(left), std::move(token), std::move(right))};
+          std::move(left), ActionTokenData{token, ActionTokens::Division}, std::move(right))};
       left.swap(temp);
       break;
     }
@@ -200,7 +207,7 @@ std::unique_ptr<Expression> Parser::mulExpr() {
       m_lexer->advance();
       auto right = powExpr();
       std::unique_ptr<Expression> temp{std::make_unique<BinaryArithmeticOperation>(
-          std::move(left), std::move(token), std::move(right))};
+          std::move(left), ActionTokenData{token, ActionTokens::Modulo}, std::move(right))};
       left.swap(temp);
       break;
     }
@@ -218,8 +225,8 @@ std::unique_ptr<Expression> Parser::powExpr() {
   if (token.m_token == Token::Pow) {
     m_lexer->advance();
     auto right = unaryExpr();
-    return std::make_unique<BinaryArithmeticOperation>(std::move(left), std::move(token),
-                                                       std::move(right));
+    return std::make_unique<BinaryArithmeticOperation>(
+        std::move(left), ActionTokenData{token, ActionTokens::Power}, std::move(right));
   } else {
     return left;
   }
@@ -232,13 +239,15 @@ std::unique_ptr<Expression> Parser::unaryExpr() {
   case Token::Plus: {
     m_lexer->advance();
     auto result = primary();
-    return std::make_unique<UnaryArithmeticOperation>(std::move(result), std::move(token));
+    return std::make_unique<UnaryArithmeticOperation>(
+        std::move(result), ActionTokenData{token, ActionTokens::positive});
     break;
   }
   case Token::Minus: {
     m_lexer->advance();
     auto result = primary();
-    return std::make_unique<UnaryArithmeticOperation>(std::move(result), std::move(token));
+    return std::make_unique<UnaryArithmeticOperation>(
+        std::move(result), ActionTokenData{token, ActionTokens::negative});
     break;
   }
   default:
@@ -281,39 +290,48 @@ std::unique_ptr<Expression> Parser::primary() {
     break;
   case Token::Sin:
     arg = getArgument();
-    return std::make_unique<FunctionArithmetic>(std::move(arg), std::move(t));
+    return std::make_unique<FunctionArithmetic>(std::move(arg),
+                                                ActionTokenData{t, ActionTokens::sin});
     break;
   case Token::Cos:
     arg = getArgument();
-    return std::make_unique<FunctionArithmetic>(std::move(arg), std::move(t));
+    return std::make_unique<FunctionArithmetic>(std::move(arg),
+                                                ActionTokenData{t, ActionTokens::cos});
     break;
   case Token::Tan:
     arg = getArgument();
-    return std::make_unique<FunctionArithmetic>(std::move(arg), std::move(t));
+    return std::make_unique<FunctionArithmetic>(std::move(arg),
+                                                ActionTokenData{t, ActionTokens::tan});
     break;
   case Token::Asin:
     arg = getArgument();
-    return std::make_unique<FunctionArithmetic>(std::move(arg), std::move(t));
+    return std::make_unique<FunctionArithmetic>(std::move(arg),
+                                                ActionTokenData{t, ActionTokens::Asin});
     break;
   case Token::Acos:
     arg = getArgument();
-    return std::make_unique<FunctionArithmetic>(std::move(arg), std::move(t));
+    return std::make_unique<FunctionArithmetic>(std::move(arg),
+                                                ActionTokenData{t, ActionTokens::Acos});
     break;
   case Token::Atan:
     arg = getArgument();
-    return std::make_unique<FunctionArithmetic>(std::move(arg), std::move(t));
+    return std::make_unique<FunctionArithmetic>(std::move(arg),
+                                                ActionTokenData{t, ActionTokens::Atan});
     break;
   case Token::Log:
     arg = getArgument();
-    return std::make_unique<FunctionArithmetic>(std::move(arg), std::move(t));
+    return std::make_unique<FunctionArithmetic>(std::move(arg),
+                                                ActionTokenData{t, ActionTokens::Log});
     break;
   case Token::Sqrt:
     arg = getArgument();
-    return std::make_unique<FunctionArithmetic>(std::move(arg), std::move(t));
+    return std::make_unique<FunctionArithmetic>(std::move(arg),
+                                                ActionTokenData{t, ActionTokens::Sqrt});
     break;
   case Token::Int:
     arg = getArgument();
-    return std::make_unique<FunctionArithmetic>(std::move(arg), std::move(t));
+    return std::make_unique<FunctionArithmetic>(std::move(arg),
+                                                ActionTokenData{t, ActionTokens::Int});
     break;
   default:
     throw SyntaxError{"invalid expression", loc};

@@ -7,12 +7,10 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
-#include <variant>
 #include <vector>
 
 class ExpGen {
 private:
-  using var = std::variant<bool, double>;
   /*
   true if double
   false if bool

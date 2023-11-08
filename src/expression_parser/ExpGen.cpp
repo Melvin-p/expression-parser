@@ -33,7 +33,7 @@ std::unique_ptr<Arithmetic> ExpGen::genArithmetic(const double prob, bool unary)
     if ((arith_prob <= 6 && !unary) || (arith_prob <= 4 && unary)) {
 
       auto left{genArithmetic(prob / 1.1, unary)};
-      Token t{m_random.getArithBinaryOp()};
+      ActionTokens t{m_random.getArithBinaryOp()};
       auto right{genArithmetic(prob / 1.1, unary)};
       auto out = std::make_unique<BinaryArithmeticOperation>(std::move(left), t, std::move(right));
 
@@ -47,7 +47,7 @@ std::unique_ptr<Arithmetic> ExpGen::genArithmetic(const double prob, bool unary)
                (arith_prob >= 5 && arith_prob <= 8 && unary)) {
 
       auto input{genArithmetic(prob / 1.1, unary)};
-      Token t{m_random.getFunction()};
+      ActionTokens t{m_random.getFunction()};
       auto out = std::make_unique<FunctionArithmetic>(std::move(input), t);
 
       if (m_random.getInteger1to12() >= 10) {
@@ -60,7 +60,7 @@ std::unique_ptr<Arithmetic> ExpGen::genArithmetic(const double prob, bool unary)
 
       // do not generate any more unary operators
       auto left{genArithmetic(prob / 1.1, false)};
-      Token t{m_random.getArithUnaryOp()};
+      ActionTokens t{m_random.getArithUnaryOp()};
       auto out = std::make_unique<UnaryArithmeticOperation>(std::move(left), t);
 
       if (m_random.getInteger1to12() >= 10) {
@@ -99,7 +99,7 @@ std::unique_ptr<Boolean> ExpGen::genBoolean(const double prob, bool unary) {
     if ((arith_prob <= 6 && !unary) || (arith_prob <= 4 && unary)) {
 
       auto left{genBoolean(prob / 1.1, unary)};
-      Token t{m_random.getBinaryOp()};
+      ActionTokens t{m_random.getBinaryOp()};
       auto right{genBoolean(prob / 1.1, unary)};
 
       auto out = std::make_unique<BinaryBooleanOperation>(std::move(left), t, std::move(right));
@@ -114,7 +114,7 @@ std::unique_ptr<Boolean> ExpGen::genBoolean(const double prob, bool unary) {
                (arith_prob >= 5 && arith_prob <= 8 && unary)) {
 
       auto left{genArithmetic(prob / 1.1, unary)};
-      Token t{m_random.getCompOp()};
+      ActionTokens t{m_random.getCompOp()};
       auto right{genArithmetic(prob / 1.1, unary)};
       auto out = std::make_unique<Comparision>(std::move(left), t, std::move(right));
       return std::make_unique<ParenthesesBoolean>(std::move(out), TokenData{Token::Lp, 0, 0, "("});
@@ -123,7 +123,7 @@ std::unique_ptr<Boolean> ExpGen::genBoolean(const double prob, bool unary) {
 
       // do not generate any more unary operators
       auto left{genBoolean(prob / 1.1, false)};
-      Token t{Token::Not}; // currently the only unary boolean token
+      ActionTokens t{ActionTokens::Not}; // currently the only unary boolean token
       auto out = std::make_unique<UnaryBooleanOperation>(std::move(left), t);
 
       if (m_random.getInteger1to12() >= 10) {

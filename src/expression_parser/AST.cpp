@@ -100,18 +100,18 @@ var ParenthesesArithmetic::eval(const SymbolTable &symbol_table) const {
 }
 
 BinaryArithmeticOperation::BinaryArithmeticOperation(std::unique_ptr<Expression> &&left,
-                                                     TokenData &&token,
+                                                     ActionTokenData &&token,
                                                      std::unique_ptr<Expression> &&right)
     : m_left(dynamic_unique_ptr_cast<Arithmetic>(std::move(left))), m_token(token),
       m_right(dynamic_unique_ptr_cast<Arithmetic>(std::move(right))) {
   // check token type
   switch (m_token.getToken()) {
-  case Token::Plus:
-  case Token::Minus:
-  case Token::Mul:
-  case Token::Div:
-  case Token::Mod:
-  case Token::Pow: {
+  case ActionTokens::Addition:
+  case ActionTokens::Subtraction:
+  case ActionTokens::Multiplication:
+  case ActionTokens::Division:
+  case ActionTokens::Modulo:
+  case ActionTokens::Power: {
     break;
   }
   default: {
@@ -143,19 +143,19 @@ double BinaryArithmeticOperation::evalGetDouble(const SymbolTable &symbol_table)
 
   std::feclearexcept(FE_ALL_EXCEPT);
   switch (m_token.getToken()) {
-  case Token::Plus: {
+  case ActionTokens::Addition: {
     result = left + right;
     break;
   }
-  case Token::Minus: {
+  case ActionTokens::Subtraction: {
     result = left - right;
     break;
   }
-  case Token::Mul: {
+  case ActionTokens::Multiplication: {
     result = left * right;
     break;
   }
-  case Token::Div: {
+  case ActionTokens::Division: {
     result = left / right;
     if (std::fetestexcept(FE_INVALID) || std::fetestexcept(FE_DIVBYZERO) || std::isnan(result) ||
         std::isinf(result)) {
@@ -163,7 +163,7 @@ double BinaryArithmeticOperation::evalGetDouble(const SymbolTable &symbol_table)
     }
     break;
   }
-  case Token::Mod: {
+  case ActionTokens::Modulo: {
     result = std::fmod(left, right);
     if (std::fetestexcept(FE_INVALID) || std::fetestexcept(FE_DIVBYZERO) || std::isnan(result) ||
         std::isinf(result)) {
@@ -171,7 +171,7 @@ double BinaryArithmeticOperation::evalGetDouble(const SymbolTable &symbol_table)
     }
     break;
   }
-  case Token::Pow: {
+  case ActionTokens::Power: {
     result = std::pow(left, right);
     if (std::fetestexcept(FE_INVALID) || std::fetestexcept(FE_DIVBYZERO) || std::isnan(result) ||
         std::isinf(result)) {
@@ -193,12 +193,12 @@ var BinaryArithmeticOperation::eval(const SymbolTable &symbol_table) const {
 }
 
 UnaryArithmeticOperation::UnaryArithmeticOperation(std::unique_ptr<Expression> &&input,
-                                                   TokenData &&token)
+                                                   ActionTokenData &&token)
     : m_input(dynamic_unique_ptr_cast<Arithmetic>(std::move(input))), m_token(token) {
   // check token type
   switch (m_token.getToken()) {
-  case Token::Plus:
-  case Token::Minus: {
+  case ActionTokens::positive:
+  case ActionTokens::negative: {
     break;
   }
   default: {
@@ -206,7 +206,8 @@ UnaryArithmeticOperation::UnaryArithmeticOperation(std::unique_ptr<Expression> &
   }
   }
   if (!m_input) {
-    throw SyntaxError{"Bad data type for unary arithmetic operator", m_token.getLocation()};
+    throw SyntaxError{"Bad data type for unary arithmetic operator " + m_token.getOperation(),
+                      m_token.getLocation()};
   }
 }
 
@@ -224,9 +225,9 @@ std::string UnaryArithmeticOperation::toString(const bool braces) const {
 double UnaryArithmeticOperation::evalGetDouble(const SymbolTable &symbol_table) const {
   double input{m_input->evalGetDouble(symbol_table)};
   switch (m_token.getToken()) {
-  case Token::Plus:
+  case ActionTokens::positive:
     return +input;
-  case Token::Minus:
+  case ActionTokens::negative:
     return -input;
   default:
     // this should be unreachable
@@ -239,18 +240,18 @@ var UnaryArithmeticOperation::eval(const SymbolTable &symbol_table) const {
   return evalGetDouble(symbol_table);
 }
 
-FunctionArithmetic::FunctionArithmetic(std::unique_ptr<Expression> &&input, TokenData &&token)
+FunctionArithmetic::FunctionArithmetic(std::unique_ptr<Expression> &&input, ActionTokenData &&token)
     : m_input(dynamic_unique_ptr_cast<Arithmetic>(std::move(input))), m_token(token) {
   switch (m_token.getToken()) {
-  case Token::Sin:
-  case Token::Cos:
-  case Token::Tan:
-  case Token::Atan:
-  case Token::Acos:
-  case Token::Asin:
-  case Token::Log:
-  case Token::Sqrt:
-  case Token::Int: {
+  case ActionTokens::sin:
+  case ActionTokens::cos:
+  case ActionTokens::tan:
+  case ActionTokens::Atan:
+  case ActionTokens::Acos:
+  case ActionTokens::Asin:
+  case ActionTokens::Log:
+  case ActionTokens::Sqrt:
+  case ActionTokens::Int: {
     break;
   }
   default: {
@@ -264,31 +265,31 @@ FunctionArithmetic::FunctionArithmetic(std::unique_ptr<Expression> &&input, Toke
 
 std::string FunctionArithmetic::toString(const bool braces) const {
   switch (m_token.getToken()) {
-  case Token::Sin: {
+  case ActionTokens::sin: {
     return {" sin(" + m_input->toString(braces) + ")"};
   }
-  case Token::Cos: {
+  case ActionTokens::cos: {
     return {" cos(" + m_input->toString(braces) + ")"};
   }
-  case Token::Tan: {
+  case ActionTokens::tan: {
     return {" tan(" + m_input->toString(braces) + ")"};
   }
-  case Token::Atan: {
+  case ActionTokens::Atan: {
     return {" atan(" + m_input->toString(braces) + ")"};
   }
-  case Token::Acos: {
+  case ActionTokens::Acos: {
     return {" acos(" + m_input->toString(braces) + ")"};
   }
-  case Token::Asin: {
+  case ActionTokens::Asin: {
     return {" asin(" + m_input->toString(braces) + ")"};
   }
-  case Token::Log: {
+  case ActionTokens::Log: {
     return {" log(" + m_input->toString(braces) + ")"};
   }
-  case Token::Sqrt: {
+  case ActionTokens::Sqrt: {
     return {" sqrt(" + m_input->toString(braces) + ")"};
   }
-  case Token::Int: {
+  case ActionTokens::Int: {
     return {" Int(" + m_input->toString(braces) + ")"};
   }
   default: {
@@ -306,49 +307,49 @@ double FunctionArithmetic::evalGetDouble(const SymbolTable &symbol_table) const 
   std::feclearexcept(FE_ALL_EXCEPT);
 
   switch (m_token.getToken()) {
-  case Token::Sin: {
+  case ActionTokens::sin: {
     result = std::sin(input);
     if (std::fetestexcept(FE_INVALID) || std::isnan(result) || std::isinf(result)) {
       throw RuntimeError{"Invalid argument to sin", loc};
     }
     break;
   }
-  case Token::Cos: {
+  case ActionTokens::cos: {
     result = std::cos(input);
     if (std::fetestexcept(FE_INVALID) || std::isnan(result) || std::isinf(result)) {
       throw RuntimeError{"Invalid argument to cos", loc};
     }
     break;
   }
-  case Token::Tan: {
+  case ActionTokens::tan: {
     result = std::tan(input);
     if (std::fetestexcept(FE_INVALID) || std::isnan(result) || std::isinf(result)) {
       throw RuntimeError{"Invalid argument to tan", loc};
     }
     break;
   }
-  case Token::Atan: {
+  case ActionTokens::Atan: {
     result = std::atan(input);
     if (std::fetestexcept(FE_INVALID) || std::isnan(result) || std::isinf(result)) {
       throw RuntimeError{"Invalid argument to atan", loc};
     }
     break;
   }
-  case Token::Acos: {
+  case ActionTokens::Acos: {
     result = std::acos(input);
     if (std::fetestexcept(FE_INVALID) || std::isnan(result) || std::isinf(result)) {
       throw RuntimeError{"Invalid argument to acos", loc};
     }
     break;
   }
-  case Token::Asin: {
+  case ActionTokens::Asin: {
     result = std::asin(input);
     if (std::fetestexcept(FE_INVALID) || std::isnan(result) || std::isinf(result)) {
       throw RuntimeError{"Invalid argument to asin", loc};
     }
     break;
   }
-  case Token::Log: {
+  case ActionTokens::Log: {
     result = std::log(input);
     if (std::fetestexcept(FE_INVALID) || std::fetestexcept(FE_DIVBYZERO) || std::isnan(result) ||
         std::isinf(result)) {
@@ -356,14 +357,14 @@ double FunctionArithmetic::evalGetDouble(const SymbolTable &symbol_table) const 
     }
     break;
   }
-  case Token::Sqrt: {
+  case ActionTokens::Sqrt: {
     result = std::sqrt(input);
     if (std::fetestexcept(FE_INVALID) || std::isnan(result) || std::isinf(result)) {
       throw RuntimeError{"Invalid argument to sqrt", loc};
     }
     break;
   }
-  case Token::Int: {
+  case ActionTokens::Int: {
     if (input < 0) {
       result = std::ceil(input);
     } else {
@@ -440,13 +441,13 @@ var ParenthesesBoolean::eval(const SymbolTable &symbol_table) const {
 }
 
 BinaryBooleanOperation::BinaryBooleanOperation(std::unique_ptr<Expression> &&left,
-                                               TokenData &&token,
+                                               ActionTokenData &&token,
                                                std::unique_ptr<Expression> &&right)
     : m_left(dynamic_unique_ptr_cast<Boolean>(std::move(left))), m_token(token),
       m_right(dynamic_unique_ptr_cast<Boolean>(std::move(right))) {
   switch (m_token.getToken()) {
-  case Token::And:
-  case Token::Or: {
+  case ActionTokens::And:
+  case ActionTokens::Or: {
     break;
   }
   default: {
@@ -462,7 +463,7 @@ std::string BinaryBooleanOperation::toString(const bool braces) const {
   std::string output;
   switch (m_token.getToken()) {
 
-  case Token::And: {
+  case ActionTokens::And: {
     output = {m_left->toString(braces) + " and " + m_right->toString(braces)};
     if (braces) {
       return {"(" + output + ")"};
@@ -470,7 +471,7 @@ std::string BinaryBooleanOperation::toString(const bool braces) const {
       return output;
     }
   }
-  case Token::Or: {
+  case ActionTokens::Or: {
     output = {m_left->toString(braces) + " or " + m_right->toString(braces)};
     if (braces) {
       return {"(" + output + ")"};
@@ -489,9 +490,9 @@ bool BinaryBooleanOperation::evalGetBool(const SymbolTable &symbol_table) const 
   bool left{m_left->evalGetBool(symbol_table)};
   bool right{m_right->evalGetBool(symbol_table)};
   switch (m_token.getToken()) {
-  case Token::And:
+  case ActionTokens::And:
     return left && right;
-  case Token::Or:
+  case ActionTokens::Or:
     return left || right;
   default:
     // this should be unreachable
@@ -504,10 +505,11 @@ var BinaryBooleanOperation::eval(const SymbolTable &symbol_table) const {
   return evalGetBool(symbol_table);
 }
 
-UnaryBooleanOperation::UnaryBooleanOperation(std::unique_ptr<Expression> &&input, TokenData &&token)
+UnaryBooleanOperation::UnaryBooleanOperation(std::unique_ptr<Expression> &&input,
+                                             ActionTokenData &&token)
     : m_input(dynamic_unique_ptr_cast<Boolean>(std::move(input))), m_token(token) {
   switch (m_token.getToken()) {
-  case Token::Not: {
+  case ActionTokens::Not: {
     break;
   }
   default: {
@@ -538,15 +540,15 @@ var UnaryBooleanOperation::eval(const SymbolTable &symbol_table) const {
   return evalGetBool(symbol_table);
 }
 
-Comparision::Comparision(std::unique_ptr<Expression> &&left, TokenData &&token,
+Comparision::Comparision(std::unique_ptr<Expression> &&left, ActionTokenData &&token,
                          std::unique_ptr<Expression> &&right)
     : m_left(dynamic_unique_ptr_cast<Arithmetic>(std::move(left))), m_token(token),
       m_right(dynamic_unique_ptr_cast<Arithmetic>(std::move(right))) {
   switch (m_token.getToken()) {
-  case Token::Greater_than:
-  case Token::Less_than:
-  case Token::Equal_to:
-  case Token::Not_equal_to: {
+  case ActionTokens::Greater_than:
+  case ActionTokens::Less_than:
+  case ActionTokens::Equal_to:
+  case ActionTokens::Not_equal_to: {
     break;
   }
   default: {
@@ -562,7 +564,7 @@ Comparision::Comparision(std::unique_ptr<Expression> &&left, TokenData &&token,
 std::string Comparision::toString(const bool braces) const {
   std::string output;
   switch (m_token.getToken()) {
-  case Token::Greater_than: {
+  case ActionTokens::Greater_than: {
     output = {m_left->toString(braces) + " greater_than " + m_right->toString(braces)};
     if (braces) {
       return {"(" + output + ")"};
@@ -570,7 +572,7 @@ std::string Comparision::toString(const bool braces) const {
       return output;
     }
   }
-  case Token::Less_than: {
+  case ActionTokens::Less_than: {
     output = {m_left->toString(braces) + " less_than " + m_right->toString(braces)};
     if (braces) {
       return {"(" + output + ")"};
@@ -578,7 +580,7 @@ std::string Comparision::toString(const bool braces) const {
       return output;
     }
   }
-  case Token::Equal_to: {
+  case ActionTokens::Equal_to: {
     output = {m_left->toString(braces) + " equal_to " + m_right->toString(braces)};
     if (braces) {
       return {"(" + output + ")"};
@@ -586,7 +588,7 @@ std::string Comparision::toString(const bool braces) const {
       return output;
     }
   }
-  case Token::Not_equal_to: {
+  case ActionTokens::Not_equal_to: {
     output = {m_left->toString(braces) + " not_equal_to " + m_right->toString(braces)};
     if (braces) {
       return {"(" + output + ")"};
@@ -605,13 +607,13 @@ bool Comparision::evalGetBool(const SymbolTable &symbol_table) const {
   double left{m_left->evalGetDouble(symbol_table)};
   double right{m_right->evalGetDouble(symbol_table)};
   switch (m_token.getToken()) {
-  case Token::Greater_than:
+  case ActionTokens::Greater_than:
     return left > right;
-  case Token::Less_than:
+  case ActionTokens::Less_than:
     return left < right;
-  case Token::Equal_to:
+  case ActionTokens::Equal_to:
     return left == right;
-  case Token::Not_equal_to:
+  case ActionTokens::Not_equal_to:
     return left != right;
   default:
     // this should be unreachable
@@ -630,10 +632,9 @@ Assignment::Assignment(std::unique_ptr<Expression> &&value, TokenData &&token, b
 }
 
 std::string Assignment::toString(const bool braces) const {
-  if(m_create_var){
-  return {"var " + m_token.getText() + " = " + m_value->toString(braces) + ";\n"};
-  }
-  else{
+  if (m_create_var) {
+    return {"var " + m_token.getText() + " = " + m_value->toString(braces) + ";\n"};
+  } else {
     return {" " + m_token.getText() + " = " + m_value->toString(braces) + ";\n"};
   }
 }
@@ -670,7 +671,7 @@ std::string Assignment::evalGetString(SymbolTable &symbol_table) const {
   else if (!var_exists && m_create_var) {
     symbol_table[variable_name] = assignment_value;
   }
-  // variable does not exist and not trying to create new variable 
+  // variable does not exist and not trying to create new variable
   else {
     throw RuntimeError{"Unkown variable", m_token.getLocation()};
   }
