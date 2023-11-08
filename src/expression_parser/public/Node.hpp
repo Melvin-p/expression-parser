@@ -1,14 +1,10 @@
 #ifndef NODE_HPP
 #define NODE_HPP
 
+#include "Types.hpp"
 #include <memory>
 #include <string>
-#include <unordered_map>
-#include <variant>
 #include <vector>
-
-using var = std::variant<bool, double>;
-using SymbolTable = std::unordered_map<std::string, var>;
 
 class Node {
 private:

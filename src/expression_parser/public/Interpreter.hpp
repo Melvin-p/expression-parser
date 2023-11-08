@@ -1,14 +1,12 @@
 #ifndef INTERPRETER_HPP
 #define INTERPRETER_HPP
 
+#include "Types.hpp"
 #include <string>
-#include <unordered_map>
-#include <variant>
 
 class Interpreter {
 private:
-  using var = std::variant<bool, double>;
-  std::unordered_map<std::string, var> m_symbol_table{};
+  SymbolTable m_symbol_table{};
 
 public:
   Interpreter();

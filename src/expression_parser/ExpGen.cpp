@@ -2,6 +2,7 @@
 #include "AST.hpp"
 #include "Node.hpp"
 #include "Random.hpp"
+#include "Types.hpp"
 #include "tokens.hpp"
 #include <cassert>
 #include <cstddef>
@@ -163,7 +164,7 @@ std::unique_ptr<Program> ExpGen::getStatements(std::size_t count) {
                                               true)};
         out->append(std::move(val));
         m_doubles.push_back(var);
-        m_symbol_table[var] = true;
+        m_symbol_table[var] = DataTypes::double_;
         // bool
       } else {
         auto exp_temp = genBoolean();
@@ -171,7 +172,7 @@ std::unique_ptr<Program> ExpGen::getStatements(std::size_t count) {
                                               true)};
         out->append(std::move(val));
         m_bools.push_back(var);
-        m_symbol_table[var] = false;
+        m_symbol_table[var] = DataTypes::bool_;
       }
       // assign to existing variable
     } else if (assignment && !new_var && !m_symbol_table.empty()) {
@@ -180,19 +181,17 @@ std::unique_ptr<Program> ExpGen::getStatements(std::size_t count) {
       auto type{it->second};
 
       // double
-      if (type) {
+      if (type == DataTypes::double_) {
         auto exp_temp = genArithmetic();
         auto val{std::make_unique<Assignment>(std::move(exp_temp), TokenData{Token::Id, 0, 0, var},
                                               false)};
         out->append(std::move(val));
-        m_symbol_table[var] = true;
         // bool
       } else {
         auto exp_temp = genBoolean();
         auto val{std::make_unique<Assignment>(std::move(exp_temp), TokenData{Token::Id, 0, 0, var},
                                               false)};
         out->append(std::move(val));
-        m_symbol_table[var] = false;
       }
     } else if (!assignment) {
       bool type{m_random.getBool()};
