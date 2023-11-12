@@ -52,6 +52,7 @@ public:
   const std::string getLocation() const;
   const std::string getText() const;
   const std::string getOperation() const;
+  const std::string getOperator() const;
 };
 
 #endif

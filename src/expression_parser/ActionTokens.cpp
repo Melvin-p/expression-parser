@@ -1,4 +1,5 @@
 #include "ActionTokens.hpp"
+#include <string>
 
 ActionTokenData::ActionTokenData(TokenData &lexer_token, ActionTokens token)
     : m_token(token), m_postion(lexer_token.getPostion()), m_line(lexer_token.getLine()),
@@ -70,5 +71,60 @@ const std::string ActionTokenData::getOperation() const {
     return "negative";
   case ActionTokens::positive:
     return "positive";
+  }
+}
+
+const std::string ActionTokenData::getOperator() const {
+  switch (m_token) {
+  case ActionTokens::sin:
+    return "sine";
+  case ActionTokens::cos:
+    return "cosine";
+  case ActionTokens::tan:
+    return "tan";
+  case ActionTokens::Asin:
+    return "arc sine";
+  case ActionTokens::Acos:
+    return "arc cosine";
+  case ActionTokens::Atan:
+    return "arc tan";
+  case ActionTokens::Log:
+    return "log";
+  case ActionTokens::Sqrt:
+    return "square root";
+  case ActionTokens::Int:
+    return "Int";
+  case ActionTokens::Equal_to:
+    return "equal to";
+  case ActionTokens::Not_equal_to:
+    return "not equal to";
+  case ActionTokens::Less_than:
+    return "less than";
+  case ActionTokens::Greater_than:
+    return "greater than";
+  case ActionTokens::And:
+    return "and";
+  case ActionTokens::Or:
+    return "or";
+  case ActionTokens::Not:
+    return "not";
+  case ActionTokens::Assignment:
+    return "=";
+  case ActionTokens::Addition:
+    return "+";
+  case ActionTokens::Subtraction:
+    return "-";
+  case ActionTokens::Division:
+    return "/";
+  case ActionTokens::Multiplication:
+    return "*";
+  case ActionTokens::Modulo:
+    return "%";
+  case ActionTokens::Power:
+    return "^";
+  case ActionTokens::negative:
+    return "-";
+  case ActionTokens::positive:
+    return "+";
   }
 }

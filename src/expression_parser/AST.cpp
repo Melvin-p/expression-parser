@@ -126,8 +126,7 @@ BinaryArithmeticOperation::BinaryArithmeticOperation(std::unique_ptr<Expression>
 }
 
 std::string BinaryArithmeticOperation::toString(const bool braces) const {
-  std::string output{m_left->toString(braces) + static_cast<char>(m_token.getToken()) +
-                     m_right->toString(braces)};
+  std::string output{m_left->toString(braces) + m_token.getOperator() + m_right->toString(braces)};
   if (braces) {
     return {"(" + output + ")"};
   } else {
@@ -213,7 +212,7 @@ UnaryArithmeticOperation::UnaryArithmeticOperation(std::unique_ptr<Expression> &
 
 std::string UnaryArithmeticOperation::toString(const bool braces) const {
   std::string out{" "};
-  out += static_cast<char>(m_token.getToken());
+  out += m_token.getOperator();
   out += m_input->toString(braces);
   if (braces) {
     return {"(" + out + ")"};
