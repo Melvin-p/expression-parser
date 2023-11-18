@@ -2,7 +2,6 @@
 #define EXP_GEN_HPP
 
 #include "Node.hpp"
-#include "Random.hpp"
 #include "Types.hpp"
 #include <cstddef>
 #include <memory>
@@ -19,10 +18,12 @@ private:
   std::unordered_map<std::string, DataTypes> m_symbol_table{};
   std::vector<std::string> m_bools{};
   std::vector<std::string> m_doubles{};
-  Random m_random{};
+  struct Data;
+  std::unique_ptr<Data> m_data;
 
 public:
-  ExpGen() = default;
+  ExpGen();
+  ~ExpGen();
   std::unique_ptr<Arithmetic> genArithmetic(const double prob = 1, bool unary = true);
   std::unique_ptr<Boolean> genBoolean(const double prob = 1, bool unary = true);
   std::unique_ptr<Program> getStatements(std::size_t count = 10);
