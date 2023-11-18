@@ -11,10 +11,6 @@
 
 class ExpGen {
 private:
-  /*
-  true if double
-  false if bool
-  */
   std::unordered_map<std::string, DataTypes> m_symbol_table{};
   std::vector<std::string> m_bools{};
   std::vector<std::string> m_doubles{};

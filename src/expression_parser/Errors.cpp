@@ -1,5 +1,4 @@
 #include "Errors.hpp"
-#include <string>
 
 LexicalError::LexicalError(std::string message, std::string location) {
   m_message.append(message);

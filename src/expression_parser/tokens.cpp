@@ -1,6 +1,4 @@
 #include "tokens.hpp"
-#include <cstddef>
-#include <string>
 
 TokenData::TokenData(Token token, std::size_t postion, std::size_t line, std::string text)
     : m_token(token), m_postion(postion), m_line(line), m_text(text) {}

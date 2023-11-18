@@ -8,7 +8,6 @@
 #include <cmath>
 #include <iomanip>
 #include <sstream>
-#include <string>
 #include <utility>
 
 #if !(math_errhandling & MATH_ERREXCEPT)

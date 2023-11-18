@@ -5,9 +5,7 @@
 #include "Lexer.hpp"
 #include "Node.hpp"
 #include "tokens.hpp"
-#include <memory>
 #include <string>
-
 
 std::unique_ptr<Program> Parser::genAST(std::string &s) {
   m_lexer = std::make_unique<Lexer>(std::istringstream{s});

@@ -2,7 +2,6 @@
 #include "Errors.hpp"
 #include "tokens.hpp"
 #include <cctype>
-#include <string>
 
 Lexer::Lexer(std::istringstream &&ss)
     : m_iss(std::move(ss)), m_buffer(""), m_postion(0), m_line(0), m_cur_token(getToken()) {}

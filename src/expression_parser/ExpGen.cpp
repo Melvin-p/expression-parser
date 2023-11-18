@@ -5,7 +5,6 @@
 #include "Types.hpp"
 #include "tokens.hpp"
 #include <cassert>
-#include <memory>
 
 namespace {
 const constexpr std::size_t max_iterations{10};

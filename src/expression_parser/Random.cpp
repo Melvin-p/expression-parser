@@ -1,7 +1,6 @@
 #include "Random.hpp"
 #include <algorithm>
 #include <array>
-#include <cstddef>
 
 ActionTokens Random::getArithBinaryOp() {
   const constexpr std::array<const ActionTokens, 6> operators{

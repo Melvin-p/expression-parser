@@ -9,7 +9,6 @@ set(CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-option(BUILD_SHARED_LIBS ON)
 option(lto "build with link time optimisation" ON)
 
 if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
