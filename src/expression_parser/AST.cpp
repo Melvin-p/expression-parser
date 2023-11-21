@@ -1,8 +1,6 @@
 #include "AST.hpp"
 #include "Errors.hpp"
-#include "Node.hpp"
 #include "common.hpp"
-#include "tokens.hpp"
 #include <cassert>
 #include <cfenv>
 #include <cmath>
@@ -57,6 +55,18 @@ var Variable::eval(const SymbolTable &symbol_table) const {
     throw RuntimeError{"variable does not exist yet", m_token.getLocation()};
   }
 };
+
+DataTypes Variable::getDataType(const SymbolTable &symbol_table) const {
+  if (auto pos{symbol_table.find(m_token.getText())}; pos != symbol_table.end()) {
+    if (auto val = std::get_if<bool>(&(pos->second))) {
+      return DataTypes::bool_;
+    } else if (auto val = std::get_if<double>(&(pos->second))) {
+      return DataTypes::double_;
+    }
+  } else {
+    throw RuntimeError{"variable does not exist yet", m_token.getLocation()};
+  }
+}
 
 AtomicArithmetic::AtomicArithmetic(TokenData &&token) : m_token(std::move(token)) {}
 

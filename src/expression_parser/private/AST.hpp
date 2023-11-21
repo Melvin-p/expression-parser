@@ -3,10 +3,10 @@
 
 #include "ActionTokens.hpp"
 #include "Node.hpp"
+#include "Types.hpp"
 #include "tokens.hpp"
 #include <memory>
 #include <string>
-
 
 class Variable : public Arithmetic, public Boolean {
 private:
@@ -18,6 +18,7 @@ public:
   virtual double evalGetDouble(const SymbolTable &symbol_table) const override;
   virtual bool evalGetBool(const SymbolTable &symbol_table) const override;
   virtual var eval(const SymbolTable &symbol_table) const override;
+  virtual DataTypes getDataType(const SymbolTable &symbol_table) const override;
 };
 
 class AtomicArithmetic : public Arithmetic {

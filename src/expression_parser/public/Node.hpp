@@ -22,16 +22,25 @@ public:
    * @return var
    */
   virtual var eval(const SymbolTable &symbol_table) const = 0;
+  /**
+   * @brief Get the data type of the expression node
+   *
+   * @param symbol_table
+   * @return DataTypes
+   */
+  virtual DataTypes getDataType(const SymbolTable &symbol_table) const = 0;
 };
 
 class Arithmetic : virtual public Expression {
 public:
   virtual double evalGetDouble(const SymbolTable &symbol_table) const = 0;
+  virtual DataTypes getDataType(const SymbolTable &symbol_table) const override;
 };
 
 class Boolean : virtual public Expression {
 public:
   virtual bool evalGetBool(const SymbolTable &symbol_table) const = 0;
+  virtual DataTypes getDataType(const SymbolTable &symbol_table) const override;
 };
 
 class Statement : public Node {
