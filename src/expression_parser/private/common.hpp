@@ -22,4 +22,12 @@ std::unique_ptr<Derived> dynamic_unique_ptr_cast(std::unique_ptr<Base> &&p) {
   }
 }
 
+[[noreturn]] inline void unreachable() {
+#if defined(__GNUC__)
+  __builtin_unreachable();
+#elif defined(_MSC_VER)
+  __assume(false);
+#endif
+}
+
 #endif

@@ -1,10 +1,8 @@
 #include "ExpGen.hpp"
 #include "AST.hpp"
-#include "Node.hpp"
 #include "Random.hpp"
-#include "Types.hpp"
+#include "common.hpp"
 #include "tokens.hpp"
-#include <cassert>
 
 namespace {
 const constexpr std::size_t max_iterations{10};
@@ -77,10 +75,7 @@ std::unique_ptr<Arithmetic> ExpGen::genArithmetic(const double prob, bool unary)
         return out;
       }
     } else {
-      // this code should be unreachable
-      assert(false);
-      return std::make_unique<AtomicArithmetic>(
-          TokenData{Token::Number, 0, 0, std::to_string(m_data->m_random.getReal0to9())});
+      unreachable();
     }
   }
 }
@@ -140,13 +135,7 @@ std::unique_ptr<Boolean> ExpGen::genBoolean(const double prob, bool unary) {
         return out;
       }
     } else {
-      // this code should be unreachable
-      assert(false);
-      if (m_data->m_random.get0or1()) {
-        return std::make_unique<AtomicBoolean>(TokenData{Token::True, 0, 0, "true"});
-      } else {
-        return std::make_unique<AtomicBoolean>(TokenData{Token::False, 0, 0, "false"});
-      }
+      unreachable();
     }
   }
 }

@@ -1,7 +1,6 @@
 #include "AST.hpp"
 #include "Errors.hpp"
 #include "common.hpp"
-#include <cassert>
 #include <cfenv>
 #include <cmath>
 #include <iomanip>
@@ -66,6 +65,7 @@ DataTypes Variable::getDataType(const SymbolTable &symbol_table) const {
   } else {
     throw RuntimeError{"variable does not exist yet", m_token.getLocation()};
   }
+  unreachable();
 }
 
 AtomicArithmetic::AtomicArithmetic(TokenData &&token) : m_token(std::move(token)) {}
@@ -188,9 +188,7 @@ double BinaryArithmeticOperation::evalGetDouble(const SymbolTable &symbol_table)
     break;
   }
   default: {
-    // this should be unreachable
-    assert(false);
-    result = 0;
+    unreachable();
   }
   }
   return result;
@@ -238,9 +236,7 @@ double UnaryArithmeticOperation::evalGetDouble(const SymbolTable &symbol_table) 
   case ActionTokens::negative:
     return -input;
   default:
-    // this should be unreachable
-    assert(false);
-    return 0;
+    unreachable();
   }
 }
 
@@ -301,8 +297,7 @@ std::string FunctionArithmetic::toString(const bool braces) const {
     return {" Int(" + m_input->toString(braces) + ")"};
   }
   default: {
-    assert(false);
-    return {""};
+    unreachable();
   }
   }
 }
@@ -381,9 +376,7 @@ double FunctionArithmetic::evalGetDouble(const SymbolTable &symbol_table) const 
     break;
   }
   default:
-    // this should be unreachable
-    assert(false);
-    result = 0;
+    unreachable();
   }
 
   return result;
@@ -409,8 +402,7 @@ std::string AtomicBoolean::toString([[maybe_unused]] const bool braces) const {
   } else if (m_token.getToken() == Token::False) {
     return {" false "};
   } else {
-    assert(false);
-    return {""};
+    unreachable();
   }
 }
 
@@ -420,9 +412,7 @@ bool AtomicBoolean::evalGetBool([[maybe_unused]] const SymbolTable &symbol_table
   } else if (m_token.getToken() == Token::False) {
     return false;
   } else {
-    // should be unreachable
-    assert(false);
-    return false;
+    unreachable();
   }
 }
 
@@ -488,8 +478,7 @@ std::string BinaryBooleanOperation::toString(const bool braces) const {
     }
   }
   default: {
-    assert(false);
-    return {""};
+    unreachable();
   }
   }
 }
@@ -503,9 +492,7 @@ bool BinaryBooleanOperation::evalGetBool(const SymbolTable &symbol_table) const 
   case ActionTokens::Or:
     return left || right;
   default:
-    // this should be unreachable
-    assert(false);
-    return false;
+    unreachable();
   }
 }
 
@@ -605,8 +592,7 @@ std::string Comparision::toString(const bool braces) const {
     }
   }
   default: {
-    assert("");
-    return {""};
+    unreachable();
   }
   }
 }
@@ -624,9 +610,7 @@ bool Comparision::evalGetBool(const SymbolTable &symbol_table) const {
   case ActionTokens::Not_equal_to:
     return left != right;
   default:
-    // this should be unreachable
-    assert(false);
-    return false;
+    unreachable();
   }
 }
 
@@ -697,17 +681,15 @@ std::string Print::evalGetString(SymbolTable &symbol_table) const {
     } else {
       return "false\n";
     }
-  } else if (auto value = std::get_if<double>(&result)) {
+  }
+  if (auto value = std::get_if<double>(&result)) {
 
     std::stringstream buffer;
     buffer << std::setprecision(4) << *value;
     auto val{buffer.str() + '\n'};
     return val;
-
-  } else {
-    assert(false);
-    return "";
   }
+  unreachable();
 }
 
 std::string Print::toString(const bool braces) const { return {m_value->toString(braces) + ";\n"}; }
