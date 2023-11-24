@@ -11,6 +11,7 @@ private:
 public:
   Interpreter();
   [[nodiscard]] std::string evaluate(std::string &s);
+  const SymbolTable &getSymbolTable() const;
   void reset();
 };
 

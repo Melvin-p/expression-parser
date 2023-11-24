@@ -151,7 +151,7 @@ private:
   std::unique_ptr<Expression> m_value;
 
 public:
-  Print(std::unique_ptr<Expression> &&value) : m_value(std::move(value)) {}
+  Print(std::unique_ptr<Expression> &&value);
   virtual std::string toString(const bool braces) const override;
   virtual std::string evalGetString(SymbolTable &symbol_table) const override;
 };

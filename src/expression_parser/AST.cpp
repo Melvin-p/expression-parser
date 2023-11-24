@@ -670,6 +670,8 @@ std::string Assignment::evalGetString(SymbolTable &symbol_table) const {
   return "";
 }
 
+Print::Print(std::unique_ptr<Expression> &&value) : m_value(std::move(value)) {}
+
 std::string Print::evalGetString(SymbolTable &symbol_table) const {
 
   var result = m_value->eval(symbol_table);

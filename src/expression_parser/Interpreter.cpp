@@ -16,6 +16,8 @@ std::string Interpreter::evaluate(std::string &s) {
   return val->eval(m_symbol_table);
 }
 
+const SymbolTable &Interpreter::getSymbolTable() const { return m_symbol_table; }
+
 void Interpreter::reset() {
   m_symbol_table.clear();
   m_symbol_table["pi"] = 4.0 * std::atan(1.0);
