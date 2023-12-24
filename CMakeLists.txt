@@ -10,13 +10,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 option(lto "build with link time optimisation" ON)
+option(BUILD_SHARED_LIBS OFF)
 
-if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
-    message(WARNING "Windows")
-endif()
-
-if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-    message(WARNING "MSVC")
+if(NOT BUILD_SHARED_LIBS)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 endif()
 
 if(lto)

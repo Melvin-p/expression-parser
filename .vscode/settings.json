@@ -11,6 +11,7 @@
         "CMAKE_CXX_EXTENSIONS": false,
         "C_EXTENSIONS": false,
         "CMAKE_TOOLCHAIN_FILE": "${env:vcpkg}/scripts/buildsystems/vcpkg.cmake",
+        "VCPKG_TARGET_TRIPLET": "${env:vcpkg_triplet}"
     },
     "cmake.preferredGenerators": [
         "Ninja",

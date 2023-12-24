@@ -7,3 +7,6 @@ compile_commands.json
 
 #debug
 temp/
+
+#qt
+CMakeLists.txt.user
